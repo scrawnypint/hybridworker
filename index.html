@@ -32,7 +32,16 @@
     <div class="max-w-7xl mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2">Kalendarz Pracy Hybrydowej 2026</h1>
-            <p class="text-slate-600 mb-4">Planer obecności w biurze. Wymóg: <span class="font-bold text-blue-600">40%</span> dni pracujących.</p>
+            <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
+                Planer obecności w biurze. Wymóg: 
+                <span class="relative inline-block">
+                    <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
+                        <!-- Options generated via JS -->
+                    </select>
+                    <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
+                </span>
+                dni pracujących.
+            </p>
             
             <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
                 <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Dzień w biurze</div>
@@ -48,7 +57,7 @@
                     <div class="text-xl font-bold text-slate-700" id="year-working-days">0</div>
                 </div>
                 <div>
-                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Wymagane (40%)</div>
+                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Wymagane (<span id="summary-target-label">40%</span>)</div>
                     <div class="text-xl font-bold text-blue-600" id="year-required-days">0</div>
                 </div>
                 <div>
@@ -74,7 +83,7 @@
     <script>
         // Configuration
         const YEAR = 2026;
-        const TARGET_PERCENTAGE = 0.40;
+        let targetPercentage = parseFloat(localStorage.getItem('targetPercentage2026')) || 0.40;
         
         // Polish Holidays 2026
         const HOLIDAYS = [
@@ -145,7 +154,32 @@
             }
         }
 
+        function initTargetSelector() {
+            const selector = document.getElementById('target-selector');
+            selector.innerHTML = '';
+            for (let i = 0; i <= 100; i += 5) {
+                const option = document.createElement('option');
+                option.value = (i / 100).toFixed(2);
+                option.text = i + '%';
+                if (Math.abs(parseFloat(option.value) - targetPercentage) < 0.01) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            }
+        }
+
+        function changeTarget(val) {
+            targetPercentage = parseFloat(val);
+            localStorage.setItem('targetPercentage2026', targetPercentage);
+            updateYearlyStats();
+            renderCalendar();
+        }
+
         function updateYearlyStats() {
+            // Update summary label
+            const labelEl = document.getElementById('summary-target-label');
+            if (labelEl) labelEl.innerText = Math.round(targetPercentage * 100) + '%';
+
             let totalWorking = 0;
             let totalRequired = 0;
             
@@ -236,7 +270,7 @@
             // Safety check to not go below 0
             if (workingDaysCount < 0) workingDaysCount = 0;
 
-            const requiredDays = Math.ceil(workingDaysCount * TARGET_PERCENTAGE);
+            const requiredDays = Math.ceil(workingDaysCount * targetPercentage);
             
             return {
                 name: MONTH_NAMES[monthIndex],
@@ -281,7 +315,7 @@
                     noteHtml = `
                         <div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800 flex items-start">
                             <span class="mr-2">ℹ️</span>
-                            <span>-1 dzień roboczy (święto w sobotę).</span>
+                            <span>odliczono 1 dzień z uwagi na święto w sobotę</span>
                         </div>
                     `;
                 }
@@ -310,7 +344,7 @@
                     <div class="p-4 flex-grow pt-2">
                         <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
                             <span>Pracujące: ${data.workingDaysCount}</span>
-                            <span>Cel (40%): ${data.requiredDays}</span>
+                            <span>Cel (${Math.round(targetPercentage * 100)}%): ${data.requiredDays}</span>
                         </div>
 
                         <div class="grid grid-cols-7 gap-1 mb-2 text-center">
@@ -369,6 +403,7 @@
             }
         }
 
+        initTargetSelector();
         updateYearlyStats();
         renderCalendar();
 
