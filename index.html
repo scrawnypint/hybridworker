@@ -100,7 +100,7 @@
         <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
             Dane zapisują się w pamięci przeglądarki. Uwzględniono polskie święta. <br>
             <strong>Zasada obliczeń:</strong> (Dni robocze - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
-            Korekta: -1 dzień pracy za święto przypadające w sobotę (dla 2026 r. są to 2 dni: 15.08, 26.12).
+            Korekta: -1 dzień pracy za święto przypadające w sobotę.
         </footer>
     </div>
 
@@ -264,6 +264,7 @@
                     vacationDays = vacationDays.filter(d => d !== dateStr);
                 } else {
                     vacationDays.push(dateStr);
+                    // Ensure the day is removed from office if it's marked as vacation
                     officeDays = officeDays.filter(d => d !== dateStr);
                 }
             } else {
@@ -271,6 +272,7 @@
                     officeDays = officeDays.filter(d => d !== dateStr);
                 } else {
                     officeDays.push(dateStr);
+                    // Ensure the day is removed from vacation if it's marked as office
                     vacationDays = vacationDays.filter(d => d !== dateStr);
                 }
             }
@@ -300,10 +302,11 @@
             let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
             let days = [];
-            // Statutory working days before any compensation or vacation
+            // Base count of Mon-Fri days that are NOT statutory holidays
             let baseWorkingDaysCount = 0; 
             let saturdayHolidayCount = 0;
-            let vacationCount = 0;
+            // Planned vacation/L4 days falling on a baseWorkingDay
+            let vacationCount = 0; 
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const currentDate = new Date(currentYear, monthIndex, i);
@@ -318,13 +321,13 @@
                 const _isVacation = vacationDays.includes(dateStr);
                 const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
 
-                // 1. Calculate base Mon-Fri working days (excluding holidays)
+                // 1. Is this a day that should be worked (Mon-Fri, not holiday)?
                 let isWorkingDayCandidate = !_isWeekend && !isRealHoliday;
                 if (isWorkingDayCandidate) { 
                     baseWorkingDaysCount++; 
                 }
 
-                // 2. Count holidays falling on a Saturday (for compensation)
+                // 2. Count holidays falling on a Saturday (for compensation/reduction)
                 if (isRealHoliday && dayOfWeek === 6) {
                     saturdayHolidayCount++;
                 }
@@ -346,10 +349,12 @@
             }
 
             // Apply Saturday holiday compensation (Polish Labour Code)
+            // baseWorkingDaysCount is reduced by the number of compensatory days given
             baseWorkingDaysCount -= saturdayHolidayCount;
             if (baseWorkingDaysCount < 0) baseWorkingDaysCount = 0;
 
             // Calculate Effective Working Days (after statutory holidays and planned vacation)
+            // This is the number that the target percentage is based on.
             let effectiveWorkingDays = baseWorkingDaysCount - vacationCount;
             if (effectiveWorkingDays < 0) effectiveWorkingDays = 0;
 
@@ -388,6 +393,7 @@
             const selectedEl = document.getElementById('year-selected-days');
             selectedEl.innerText = totalSelected;
             
+            // Visual feedback on yearly goal
             if (totalSelected >= totalRequired) {
                 selectedEl.classList.remove('text-slate-700');
                 selectedEl.classList.add('text-green-600');
@@ -461,7 +467,7 @@
 
                     <div class="p-4 flex-grow pt-2">
                         <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
-                            <span title="Dni robocze minus ustawowe święta i urlopy (${data.vacationCount} dni)">Do pracy: ${data.effectiveWorkingDays}</span>
+                            <span title="Dni robocze minus ustawowe święta i urlopy (${data.vacationCount} dni)">Pracujące: ${data.effectiveWorkingDays}</span>
                             <span>Cel: ${data.requiredDays}</span>
                         </div>
 
@@ -482,7 +488,7 @@
                     if (day.isHoliday) {
                         classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
                         html += `
-                            <div class="${classes}" title="${day.isWigilia ? 'Wigilia' : 'Święto'}">
+                            <div class="${classes}" title="${day.isWigilia ? 'Wigilia (opcjonalnie wolne)' : 'Święto'}">
                                 ${day.day}
                                 <span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span>
                             </div>`;
@@ -490,7 +496,7 @@
                         classes += "bg-slate-100 text-slate-400 disabled cursor-default";
                         html += `<div class="${classes}">${day.day}</div>`;
                     } else {
-                        // Actionable Day
+                        // Actionable Day (Mon-Fri, not holiday)
                         onclick = `onclick="toggleDay('${day.dateStr}', ${m})"`;
                         
                         if (day.isOffice) {
