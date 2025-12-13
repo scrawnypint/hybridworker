@@ -100,15 +100,17 @@
         <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
             Dane zapisują się w pamięci przeglądarki. Uwzględniono polskie święta. <br>
             <strong>Zasada obliczeń:</strong> (Dni robocze - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
-            Korekta: -1 dzień pracy za święto przypadające w sobotę.
+            Korekta: -1 dzień pracy za święto przypadające w sobotę (dla 2026 r. są to 2 dni: 15.08, 26.12).
         </footer>
     </div>
 
     <script>
         // --- Configuration & Helpers ---
         
+        const MIN_YEAR = 2025;
+        const MAX_YEAR = 2035;
         const nowYear = new Date().getFullYear();
-        let currentYear = (nowYear >= 2025 && nowYear <= 2035) ? nowYear : 2025;
+        let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
 
         let targetPercentage = 0.40;
         let holidaysCache = [];
@@ -119,7 +121,6 @@
         ];
         const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
-        // State variables
         let officeDays = [];
         let vacationDays = [];
         let vacationModes = new Array(12).fill(false);
@@ -152,20 +153,22 @@
 
         function calculateHolidays(year) {
             const h = [];
-            h.push(`${year}-01-01`); // Nowy Rok
-            h.push(`${year}-01-06`); // Trzech Króli
-            h.push(`${year}-05-01`); // Święto Pracy
-            h.push(`${year}-05-03`); // Konstytucja 3 Maja
-            h.push(`${year}-08-15`); // Wniebowzięcie NMP
-            h.push(`${year}-11-01`); // Wszystkich Świętych
-            h.push(`${year}-11-11`); // Święto Niepodległości
-            h.push(`${year}-12-25`); // Boże Narodzenie 1
-            h.push(`${year}-12-26`); // Boże Narodzenie 2
+            // Fixed Holidays (9 entries)
+            h.push(`${year}-01-01`); // Nowy Rok (1)
+            h.push(`${year}-01-06`); // Trzech Króli (2)
+            h.push(`${year}-05-01`); // Święto Pracy (3)
+            h.push(`${year}-05-03`); // Konstytucja 3 Maja (4)
+            h.push(`${year}-08-15`); // Wniebowzięcie NMP (5)
+            h.push(`${year}-11-01`); // Wszystkich Świętych (6)
+            h.push(`${year}-11-11`); // Święto Niepodległości (7)
+            h.push(`${year}-12-25`); // Boże Narodzenie 1 (8)
+            h.push(`${year}-12-26`); // Boże Narodzenie 2 (9)
             
+            // Movable Holidays (4 entries)
             const easter = getEasterDate(year);
             const easterMonday = addDays(easter, 1);
             const corpusChristi = addDays(easter, 60); 
-            const pentecost = addDays(easter, 49);
+            const pentecost = addDays(easter, 49); // Zesłanie Ducha Świętego (Sunday)
 
             h.push(formatDate(easter));
             h.push(formatDate(easterMonday));
@@ -200,7 +203,7 @@
         function initYearSelector() {
             const selector = document.getElementById('year-selector');
             selector.innerHTML = '';
-            for (let y = 2025; y <= 2035; y++) {
+            for (let y = MIN_YEAR; y <= MAX_YEAR; y++) {
                 const option = document.createElement('option');
                 option.value = y;
                 option.text = y;
@@ -253,7 +256,7 @@
             const isVacationMode = vacationModes[monthIndex];
             const date = new Date(dateStr);
             
-            // Block modification of weekends and actual holidays
+            // Block modification of weekends and actual holidays (except Wigilia visual)
             if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
 
             if (isVacationMode) {
@@ -261,7 +264,6 @@
                     vacationDays = vacationDays.filter(d => d !== dateStr);
                 } else {
                     vacationDays.push(dateStr);
-                    // Remove from office if exists
                     officeDays = officeDays.filter(d => d !== dateStr);
                 }
             } else {
@@ -269,7 +271,6 @@
                     officeDays = officeDays.filter(d => d !== dateStr);
                 } else {
                     officeDays.push(dateStr);
-                    // Remove from vacation if exists
                     vacationDays = vacationDays.filter(d => d !== dateStr);
                 }
             }
@@ -288,7 +289,7 @@
 
         function isWeekend(date) {
             const day = date.getDay();
-            return day === 0 || day === 6;
+            return day === 0 || day === 6; // 0=Sunday, 6=Saturday
         }
 
         function getMonthData(monthIndex) {
@@ -299,7 +300,8 @@
             let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
             let days = [];
-            let baseWorkingDaysCount = 0; // Statutory working days (before vacation subtraction)
+            // Statutory working days before any compensation or vacation
+            let baseWorkingDaysCount = 0; 
             let saturdayHolidayCount = 0;
             let vacationCount = 0;
 
@@ -314,21 +316,22 @@
 
                 const _isOffice = officeDays.includes(dateStr);
                 const _isVacation = vacationDays.includes(dateStr);
-                const dayOfWeek = currentDate.getDay(); 
+                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
 
-                // Is this a statutory working day? (Mon-Fri, not holiday)
+                // 1. Calculate base Mon-Fri working days (excluding holidays)
                 let isWorkingDayCandidate = !_isWeekend && !isRealHoliday;
-
-                if (isWorkingDayCandidate) {
-                    baseWorkingDaysCount++;
-                    // If it is a working day AND marked as vacation, count it
-                    if (_isVacation) {
-                        vacationCount++;
-                    }
+                if (isWorkingDayCandidate) { 
+                    baseWorkingDaysCount++; 
                 }
 
+                // 2. Count holidays falling on a Saturday (for compensation)
                 if (isRealHoliday && dayOfWeek === 6) {
                     saturdayHolidayCount++;
+                }
+
+                // 3. Count planned vacation days that fall on a Mon-Fri working day
+                if (isWorkingDayCandidate && _isVacation) {
+                    vacationCount++;
                 }
 
                 days.push({
@@ -342,26 +345,23 @@
                 });
             }
 
-            // Polish Law Reduction (Saturday Holiday)
+            // Apply Saturday holiday compensation (Polish Labour Code)
             baseWorkingDaysCount -= saturdayHolidayCount;
             if (baseWorkingDaysCount < 0) baseWorkingDaysCount = 0;
 
-            // --- NEW LOGIC START ---
-            // Effective working days = Base - Vacation
+            // Calculate Effective Working Days (after statutory holidays and planned vacation)
             let effectiveWorkingDays = baseWorkingDaysCount - vacationCount;
             if (effectiveWorkingDays < 0) effectiveWorkingDays = 0;
 
-            // Target based on effective days, rounded UP (ceil)
+            // Calculate Required Office Days (Ceiling rounding)
             const requiredDays = Math.ceil(effectiveWorkingDays * targetPercentage);
-            // --- NEW LOGIC END ---
 
             return {
                 name: MONTH_NAMES[monthIndex],
                 days,
                 firstDayOffset,
-                baseWorkingDaysCount,
-                vacationCount,
                 effectiveWorkingDays,
+                vacationCount,
                 requiredDays,
                 saturdayHolidayCount
             };
@@ -461,7 +461,7 @@
 
                     <div class="p-4 flex-grow pt-2">
                         <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
-                            <span title="Dni robocze minus urlopy">Do pracy: ${data.effectiveWorkingDays}</span>
+                            <span title="Dni robocze minus ustawowe święta i urlopy (${data.vacationCount} dni)">Do pracy: ${data.effectiveWorkingDays}</span>
                             <span>Cel: ${data.requiredDays}</span>
                         </div>
 
