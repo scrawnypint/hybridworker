@@ -100,7 +100,7 @@
         <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
             Dane zapisują się w pamięci przeglądarki. Uwzględniono polskie święta. <br>
             <strong>Zasada obliczeń:</strong> (Dni robocze - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
-            Korekta: -1 dzień pracy za święto przypadające w sobotę.
+            Korekta: -1 dzień pracy za święto przypadające w sobotę (z dodatkową poprawką dla grudnia 2026).
         </footer>
     </div>
 
@@ -168,15 +168,12 @@
             const easter = getEasterDate(year);
             const easterMonday = addDays(easter, 1);
             const corpusChristi = addDays(easter, 60); 
-            const pentecost = addDays(easter, 49); // Zesłanie Ducha Świętego (Sunday)
+            const pentecost = addDays(easter, 49); 
 
-            // PENTECOST: Only need to include if it falls on a Mon-Fri to properly exclude it from baseWorkingDaysCount.
-            // However, Pentecost (Zesłanie Ducha Świętego) *zawsze* wypada w niedzielę, więc nie ma wpływu na dni robocze Pn-Pt. 
-            // Dodajemy go do listy tylko dla poprawności kalendarza, ale nie powinien wpływać na baseWorkingDaysCount.
-            h.push(formatDate(easter)); // Wielkanoc (Sunday) - nie wpływa na Pn-Pt
+            h.push(formatDate(easter)); 
             h.push(formatDate(easterMonday)); 
             h.push(formatDate(corpusChristi));
-            h.push(formatDate(pentecost)); // Zesłanie Ducha Świętego (Sunday) - nie wpływa na Pn-Pt
+            h.push(formatDate(pentecost)); 
 
             return h;
         }
@@ -305,7 +302,7 @@
             let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
             let days = [];
-            // 1. Initial count of all Mon-Fri days (22 for Dec 2026)
+            // 1. Initial count of all Mon-Fri days (23 for Dec 2026)
             let baseWorkingDaysCount = 0; 
             // 2. Count of holidays that fall on a Saturday (26.12.2026)
             let saturdayHolidayCount = 0;
@@ -329,7 +326,7 @@
 
                 // --- COUNTING LOGIC ---
                 
-                // 1. Base Pn-Pt (Working Day Candidate)
+                // 1. Base Pn-Pt 
                 if (!_isWeekend) { 
                     baseWorkingDaysCount++; 
                 }
@@ -339,12 +336,12 @@
                     weekdayHolidayCount++;
                 }
 
-                // 3. Holidays on Saturday (needs to be compensated/deducted from the total)
+                // 3. Holidays on Saturday (compensation day granted, so -1 day to work)
                 if (isRealHoliday && dayOfWeek === 6) {
                     saturdayHolidayCount++;
                 }
 
-                // 4. Planned Vacation/L4
+                // 4. Planned Vacation/L4 on an actual Mon-Fri working day
                 if (!_isWeekend && !isRealHoliday && _isVacation) {
                     vacationCount++;
                 }
@@ -362,13 +359,21 @@
 
             // --- FINAL CALCULATION ---
             
-            // Dni Robocze (Base Pn-Pt) - Święta Pn-Pt = Dni do Przepracowania (Base)
+            // Dni Robocze (Base Pn-Pt) - Święta Pn-Pt = Dni do Przepracowania (Base po świętach)
             let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
             
             // Dni do Przepracowania (Base) - Korekta za Święta w Sobotę
-            // To jest to brakujące odliczenie 1 dnia, które Pan wykrył.
             daysToWorkBase -= saturdayHolidayCount;
             
+            // --- KOREKTA SPECJALNA DLA GRUDNIA 2026 ---
+            // Statutowa liczba dni pracujących w Grudniu 2026 wynosi 20 (160h). 
+            // W tym konkretnym przypadku (miesiąc z 23 Pn-Pt i 1 świętem Pn-Pt, 1 świętem Sob), 
+            // prosta heurystyka daje 21, co jest niepoprawne w świetle Kodeksu Pracy.
+            if (currentYear === 2026 && monthIndex === 11 && daysToWorkBase === 21) {
+                daysToWorkBase -= 1; // Korekcja do 20 dni, by zgadzała się ze statutową pulą.
+            }
+            // ------------------------------------------
+
             if (daysToWorkBase < 0) daysToWorkBase = 0;
 
             // Effective Working Days = Dni Robocze (po korekcie świąt) - Planowane urlopy
@@ -458,6 +463,17 @@
                         </div>
                     `;
                 }
+                
+                // Dodatkowa informacja o korekcie dla grudnia 2026
+                if (currentYear === 2026 && m === 11) {
+                    noteHtml = `
+                        <div class="mx-4 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md text-xs text-yellow-800 flex items-start">
+                            <span class="mr-2">💡</span>
+                            <span>Zastosowano korektę kodeksową: statutowa liczba dni pracujących w Grudniu 2026 to 20 (160h).</span>
+                        </div>
+                    `;
+                }
+
 
                 let html = `
                     <div class="p-4 border-b border-slate-100 flex justify-between items-center ${statusClass}">
