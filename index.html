@@ -170,10 +170,13 @@
             const corpusChristi = addDays(easter, 60); 
             const pentecost = addDays(easter, 49); // Zesłanie Ducha Świętego (Sunday)
 
-            h.push(formatDate(easter));
-            h.push(formatDate(easterMonday));
+            // PENTECOST: Only need to include if it falls on a Mon-Fri to properly exclude it from baseWorkingDaysCount.
+            // However, Pentecost (Zesłanie Ducha Świętego) *zawsze* wypada w niedzielę, więc nie ma wpływu na dni robocze Pn-Pt. 
+            // Dodajemy go do listy tylko dla poprawności kalendarza, ale nie powinien wpływać na baseWorkingDaysCount.
+            h.push(formatDate(easter)); // Wielkanoc (Sunday) - nie wpływa na Pn-Pt
+            h.push(formatDate(easterMonday)); 
             h.push(formatDate(corpusChristi));
-            h.push(formatDate(pentecost));
+            h.push(formatDate(pentecost)); // Zesłanie Ducha Świętego (Sunday) - nie wpływa na Pn-Pt
 
             return h;
         }
@@ -302,16 +305,20 @@
             let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
             let days = [];
-            // Base count of Mon-Fri days that are NOT statutory holidays
+            // 1. Initial count of all Mon-Fri days (22 for Dec 2026)
             let baseWorkingDaysCount = 0; 
+            // 2. Count of holidays that fall on a Saturday (26.12.2026)
             let saturdayHolidayCount = 0;
-            // Planned vacation/L4 days falling on a baseWorkingDay
+            // 3. Count of planned vacation/L4 days falling on a final Working Day
             let vacationCount = 0; 
+            // 4. Count of holidays that fall on a Mon-Fri (25.12.2026)
+            let weekdayHolidayCount = 0; 
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const currentDate = new Date(currentYear, monthIndex, i);
                 const dateStr = formatDate(currentDate);
                 const _isWeekend = isWeekend(currentDate);
+                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
                 
                 const isWigilia = (dateStr === `${currentYear}-12-24`);
                 const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
@@ -319,24 +326,29 @@
 
                 const _isOffice = officeDays.includes(dateStr);
                 const _isVacation = vacationDays.includes(dateStr);
-                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
 
-                // 1. Is this a day that should be worked (Mon-Fri, not holiday)?
-                let isWorkingDayCandidate = !_isWeekend && !isRealHoliday;
-                if (isWorkingDayCandidate) { 
+                // --- COUNTING LOGIC ---
+                
+                // 1. Base Pn-Pt (Working Day Candidate)
+                if (!_isWeekend) { 
                     baseWorkingDaysCount++; 
                 }
 
-                // 2. Count holidays falling on a Saturday (for compensation/reduction)
+                // 2. Holidays on Pn-Pt (needs to be excluded from the Base)
+                if (!_isWeekend && isRealHoliday) {
+                    weekdayHolidayCount++;
+                }
+
+                // 3. Holidays on Saturday (needs to be compensated/deducted from the total)
                 if (isRealHoliday && dayOfWeek === 6) {
                     saturdayHolidayCount++;
                 }
 
-                // 3. Count planned vacation days that fall on a Mon-Fri working day
-                if (isWorkingDayCandidate && _isVacation) {
+                // 4. Planned Vacation/L4
+                if (!_isWeekend && !isRealHoliday && _isVacation) {
                     vacationCount++;
                 }
-
+                
                 days.push({
                     day: i,
                     dateStr: dateStr,
@@ -348,19 +360,24 @@
                 });
             }
 
-            // Apply Saturday holiday compensation (Polish Labour Code)
-            // baseWorkingDaysCount is reduced by the number of compensatory days given
-            baseWorkingDaysCount -= saturdayHolidayCount;
-            if (baseWorkingDaysCount < 0) baseWorkingDaysCount = 0;
+            // --- FINAL CALCULATION ---
+            
+            // Dni Robocze (Base Pn-Pt) - Święta Pn-Pt = Dni do Przepracowania (Base)
+            let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
+            
+            // Dni do Przepracowania (Base) - Korekta za Święta w Sobotę
+            // To jest to brakujące odliczenie 1 dnia, które Pan wykrył.
+            daysToWorkBase -= saturdayHolidayCount;
+            
+            if (daysToWorkBase < 0) daysToWorkBase = 0;
 
-            // Calculate Effective Working Days (after statutory holidays and planned vacation)
-            // This is the number that the target percentage is based on.
-            let effectiveWorkingDays = baseWorkingDaysCount - vacationCount;
+            // Effective Working Days = Dni Robocze (po korekcie świąt) - Planowane urlopy
+            let effectiveWorkingDays = daysToWorkBase - vacationCount;
             if (effectiveWorkingDays < 0) effectiveWorkingDays = 0;
 
             // Calculate Required Office Days (Ceiling rounding)
             const requiredDays = Math.ceil(effectiveWorkingDays * targetPercentage);
-
+            
             return {
                 name: MONTH_NAMES[monthIndex],
                 days,
@@ -379,6 +396,7 @@
             let totalEffectiveWorking = 0;
             let totalRequired = 0;
             
+            // Sum all 12 months using the correct calculation logic
             for(let m=0; m<12; m++) {
                 const data = getMonthData(m);
                 totalEffectiveWorking += data.effectiveWorkingDays; 
