@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Kalkulator i planer pracy hybrydowej na 2026 rok. Oblicz wymagane dni w biurze (40%) uwzględniając polskie święta i dni wolne.">
+    <meta name="description" content="Kalkulator i planer pracy hybrydowej (2025-2035). Oblicz wymagane dni w biurze uwzględniając polskie święta.">
     <meta name="author" content="Hybrid Work Planner">
     
-    <!-- Favicon (Calendar Emoji) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
     
-    <title>Kalkulator Pracy Hybrydowej 2026</title>
+    <title>Kalkulator Pracy Hybrydowej</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -17,11 +16,32 @@
         .day-cell { transition: all 0.2s; }
         .day-cell:hover:not(.disabled) { transform: scale(1.1); z-index: 10; cursor: pointer; }
 
+        /* Custom style for the Year Select to make it look like a title */
+        .year-select {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-weight: inherit;
+            font-size: inherit;
+            cursor: pointer;
+            border-bottom: 2px solid #bfdbfe; /* blue-200 */
+            padding: 0 0.2em;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            text-align: center;
+        }
+        .year-select:hover { border-bottom-color: #60a5fa; /* blue-400 */ }
+        .year-select:focus { background-color: #eff6ff; /* blue-50 */ border-radius: 4px; }
+
         @media print {
             body { background: white; padding: 0; }
             .max-w-7xl { max-width: 100%; }
             .shadow-sm, .shadow-md { box-shadow: none !important; }
-            button { display: none; }
+            button, select { display: none !important; }
+            /* Print hack: Show current year as text instead of select */
+            h1::after { content: " " attr(data-year); }
+            
             #calendar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
             .day-cell { border: 1px solid #ddd; }
         }
@@ -31,13 +51,18 @@
 
     <div class="max-w-7xl mx-auto">
         <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2">Kalendarz Pracy Hybrydowej 2026</h1>
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2 flex justify-center items-center gap-2 flex-wrap" id="main-title">
+                Kalendarz Pracy Hybrydowej 
+                <div class="relative inline-block">
+                    <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
+                        </select>
+                </div>
+            </h1>
             <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
                 Planer obecności w biurze. Wymóg: 
                 <span class="relative inline-block">
                     <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
-                        <!-- Options generated via JS -->
-                    </select>
+                        </select>
                     <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
                 </span>
                 dni pracujących.
@@ -46,14 +71,14 @@
             <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
                 <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Dzień w biurze</div>
                 <div class="flex items-center"><div class="w-4 h-4 bg-amber-300 rounded mr-2"></div>Urlop / L4</div>
-                <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Praca zdalna (Home Office)</div>
+                <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Praca zdalna</div>
                 <div class="flex items-center"><div class="w-4 h-4 bg-slate-100 border border-slate-200 rounded mr-2"></div>Weekend</div>
                 <div class="flex items-center"><div class="w-4 h-4 bg-red-100 border border-red-200 text-red-800 rounded mr-2 flex justify-center items-center text-xs font-bold">!</div>Święto</div>
             </div>
             
             <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div>
-                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Dni pracujące 2026</div>
+                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Dni pracujące <span class="current-year-display"></span></div>
                     <div class="text-xl font-bold text-slate-700" id="year-working-days">0</div>
                 </div>
                 <div>
@@ -67,91 +92,146 @@
             </div>
 
             <div class="mt-4 text-sm text-slate-400 text-center">
-                <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">Zresetuj kalendarz</button>
+                <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">Zresetuj kalendarz dla roku <span class="current-year-display"></span></button>
             </div>
         </header>
 
         <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <!-- Calendar months will be generated here -->
-        </div>
+            </div>
 
         <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
-            Dane zapisują się automatycznie w przeglądarce. Uwzględniono polskie święta państwowe na rok 2026.
+            Dane zapisują się automatycznie w przeglądarce. Uwzględniono polskie święta państwowe (ruchome i stałe). <br>
+            W przypadku święta przypadającego w sobotę, liczba dni pracujących w miesiącu jest pomniejszana o 1 (zgodnie z K.P.).
         </footer>
     </div>
 
     <script>
-        // Configuration
-        const YEAR = 2026;
-        let targetPercentage = parseFloat(localStorage.getItem('targetPercentage2026')) || 0.40;
-        
-        // Polish Holidays 2026
-        const HOLIDAYS = [
-            '2026-01-01', '2026-01-06', '2026-04-05', '2026-04-06', 
-            '2026-05-01', '2026-05-03', '2026-05-24', '2026-06-04', 
-            '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-24', 
-            '2026-12-25', '2026-12-26'
-        ];
+        // --- Configuration & Helpers ---
+        let currentYear = 2026; // Default start year
+        let targetPercentage = 0.40;
+        let holidaysCache = [];
 
         const MONTH_NAMES = [
             "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
             "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
         ];
-
         const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
-        // State management
-        let officeDays = JSON.parse(localStorage.getItem('officeDays2026')) || [];
-        let vacationDays = JSON.parse(localStorage.getItem('vacationDays2026')) || [];
-        
-        // Vacation Mode State (true = vacation mode, false = office mode)
+        // State variables
+        let officeDays = [];
+        let vacationDays = [];
         let vacationModes = new Array(12).fill(false);
 
+        // --- Easter & Holiday Logic ---
+        function getEasterDate(year) {
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const p = (h + l - 7 * m + 114);
+            const month = Math.floor(p / 31) - 1; // 0-indexed (March is 2, April is 3)
+            const day = (p % 31) + 1;
+            return new Date(year, month, day);
+        }
+
+        function addDays(date, days) {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+        function calculateHolidays(year) {
+            const h = [];
+            // Fixed Holidays
+            h.push(`${year}-01-01`); // Nowy Rok
+            h.push(`${year}-01-06`); // Trzech Króli
+            h.push(`${year}-05-01`); // Święto Pracy
+            h.push(`${year}-05-03`); // Konstytucja 3 Maja
+            h.push(`${year}-08-15`); // Wniebowzięcie NMP
+            h.push(`${year}-11-01`); // Wszystkich Świętych
+            h.push(`${year}-11-11`); // Święto Niepodległości
+            h.push(`${year}-12-25`); // Boże Narodzenie 1
+            h.push(`${year}-12-26`); // Boże Narodzenie 2
+            
+            // Movable Holidays based on Easter
+            const easter = getEasterDate(year);
+            const easterMonday = addDays(easter, 1);
+            const corpusChristi = addDays(easter, 60); // Boże Ciało
+
+            // Note: Pentecost (Zielone Świątki) is +49 days (always Sunday). 
+            // In hybrid work context, it doesn't reduce working days further than being a Sunday, 
+            // but we can mark it if needed. For calculation simplicity, we focus on M-F and Sat reductions.
+            // Let's add it for visual completeness if it falls on Sunday.
+            const pentecost = addDays(easter, 49);
+
+            h.push(formatDate(easter));
+            h.push(formatDate(easterMonday));
+            h.push(formatDate(corpusChristi));
+            h.push(formatDate(pentecost));
+
+            return h;
+        }
+
+        // --- Core Functions ---
+
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function loadState() {
+            // Keys now include the year to separate data
+            targetPercentage = parseFloat(localStorage.getItem(`targetPercentage_${currentYear}`)) || 0.40;
+            officeDays = JSON.parse(localStorage.getItem(`officeDays_${currentYear}`)) || [];
+            vacationDays = JSON.parse(localStorage.getItem(`vacationDays_${currentYear}`)) || [];
+            holidaysCache = calculateHolidays(currentYear);
+            vacationModes = new Array(12).fill(false); // Reset view modes on reload/year change
+        }
+
         function saveState() {
-            localStorage.setItem('officeDays2026', JSON.stringify(officeDays));
-            localStorage.setItem('vacationDays2026', JSON.stringify(vacationDays));
+            localStorage.setItem(`officeDays_${currentYear}`, JSON.stringify(officeDays));
+            localStorage.setItem(`vacationDays_${currentYear}`, JSON.stringify(vacationDays));
+            localStorage.setItem(`targetPercentage_${currentYear}`, targetPercentage);
             updateYearlyStats();
         }
 
-        function toggleVacationMode(monthIndex) {
-            vacationModes[monthIndex] = !vacationModes[monthIndex];
-            renderCalendar();
-        }
-
-        function toggleDay(dateStr, monthIndex) {
-            const isVacationMode = vacationModes[monthIndex];
-
-            if (isVacationMode) {
-                // VACATION MODE LOGIC
-                if (vacationDays.includes(dateStr)) {
-                    vacationDays = vacationDays.filter(d => d !== dateStr);
-                } else {
-                    vacationDays.push(dateStr);
-                    // If it was an office day, remove it
-                    officeDays = officeDays.filter(d => d !== dateStr);
-                }
-            } else {
-                // OFFICE MODE LOGIC
-                if (officeDays.includes(dateStr)) {
-                    officeDays = officeDays.filter(d => d !== dateStr);
-                } else {
-                    officeDays.push(dateStr);
-                    // If it was a vacation day, remove it
-                    vacationDays = vacationDays.filter(d => d !== dateStr);
-                }
+        function initYearSelector() {
+            const selector = document.getElementById('year-selector');
+            selector.innerHTML = '';
+            for (let y = 2025; y <= 2035; y++) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.text = y;
+                if (y === currentYear) option.selected = true;
+                selector.appendChild(option);
             }
             
-            saveState();
-            renderCalendar();
+            // Update display spans
+            document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
+            
+            // For print hack
+            document.getElementById('main-title').setAttribute('data-year', currentYear);
         }
 
-        function clearAll() {
-            if(confirm("Czy na pewno chcesz wyczyścić cały kalendarz (biuro i urlopy)?")) {
-                officeDays = [];
-                vacationDays = [];
-                saveState();
-                renderCalendar();
-            }
+        function changeYear(val) {
+            currentYear = parseInt(val);
+            document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
+            document.getElementById('main-title').setAttribute('data-year', currentYear);
+            
+            loadState();
+            initTargetSelector(); // Re-init because percentage might differ per year
+            updateYearlyStats();
+            renderCalendar();
         }
 
         function initTargetSelector() {
@@ -170,39 +250,47 @@
 
         function changeTarget(val) {
             targetPercentage = parseFloat(val);
-            localStorage.setItem('targetPercentage2026', targetPercentage);
+            saveState(); // Saves the percentage for this specific year
             updateYearlyStats();
             renderCalendar();
         }
 
-        function updateYearlyStats() {
-            // Update summary label
-            const labelEl = document.getElementById('summary-target-label');
-            if (labelEl) labelEl.innerText = Math.round(targetPercentage * 100) + '%';
+        function toggleVacationMode(monthIndex) {
+            vacationModes[monthIndex] = !vacationModes[monthIndex];
+            renderCalendar();
+        }
 
-            let totalWorking = 0;
-            let totalRequired = 0;
-            
-            for(let m=0; m<12; m++) {
-                const data = getMonthData(m);
-                totalWorking += data.workingDaysCount;
-                totalRequired += data.requiredDays;
-            }
+        function toggleDay(dateStr, monthIndex) {
+            const isVacationMode = vacationModes[monthIndex];
+            // Safety check for holidays/weekends
+            const date = new Date(dateStr);
+            if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
 
-            const totalSelected = officeDays.length;
-
-            document.getElementById('year-working-days').innerText = totalWorking;
-            document.getElementById('year-required-days').innerText = totalRequired;
-            
-            const selectedEl = document.getElementById('year-selected-days');
-            selectedEl.innerText = totalSelected;
-            
-            if (totalSelected >= totalRequired) {
-                selectedEl.classList.remove('text-slate-700', 'text-green-600');
-                selectedEl.classList.add('text-green-600');
+            if (isVacationMode) {
+                if (vacationDays.includes(dateStr)) {
+                    vacationDays = vacationDays.filter(d => d !== dateStr);
+                } else {
+                    vacationDays.push(dateStr);
+                    officeDays = officeDays.filter(d => d !== dateStr);
+                }
             } else {
-                selectedEl.classList.remove('text-green-600');
-                selectedEl.classList.add('text-slate-700');
+                if (officeDays.includes(dateStr)) {
+                    officeDays = officeDays.filter(d => d !== dateStr);
+                } else {
+                    officeDays.push(dateStr);
+                    vacationDays = vacationDays.filter(d => d !== dateStr);
+                }
+            }
+            saveState();
+            renderCalendar();
+        }
+
+        function clearAll() {
+            if(confirm(`Czy na pewno chcesz wyczyścić cały kalendarz dla roku ${currentYear}?`)) {
+                officeDays = [];
+                vacationDays = [];
+                saveState();
+                renderCalendar();
             }
         }
 
@@ -211,16 +299,9 @@
             return day === 0 || day === 6;
         }
 
-        function formatDate(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-
         function getMonthData(monthIndex) {
-            const date = new Date(YEAR, monthIndex, 1);
-            const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+            const date = new Date(currentYear, monthIndex, 1);
+            const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
             
             let startDay = date.getDay(); 
             let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
@@ -230,25 +311,26 @@
             let saturdayHolidayCount = 0;
 
             for (let i = 1; i <= daysInMonth; i++) {
-                const currentDate = new Date(YEAR, monthIndex, i);
+                const currentDate = new Date(currentYear, monthIndex, i);
                 const dateStr = formatDate(currentDate);
                 const _isWeekend = isWeekend(currentDate);
-                const _isHoliday = HOLIDAYS.includes(dateStr);
+                
+                // Wigilia (24.12) logic: Visual only, counts as working unless weekend
+                const isWigilia = (dateStr === `${currentYear}-12-24`);
+                const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
+                const isVisualHoliday = holidaysCache.includes(dateStr) || isWigilia;
+
                 const _isOffice = officeDays.includes(dateStr);
                 const _isVacation = vacationDays.includes(dateStr);
-                const dayOfWeek = currentDate.getDay();
+                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
 
-                let isWorkingDay = !_isWeekend && !_isHoliday;
+                let isWorkingDayCandidate = !_isWeekend && !isRealHoliday;
 
-                // Subtract vacation days from working days
-                if (isWorkingDay && _isVacation) {
-                    // It counts as a "potential" working day that was taken off, 
-                    // so we do NOT increment workingDaysCount
-                } else if (isWorkingDay) {
+                if (isWorkingDayCandidate) {
                     workingDaysCount++;
                 }
 
-                if (_isHoliday && dayOfWeek === 6) {
+                if (isRealHoliday && dayOfWeek === 6) {
                     saturdayHolidayCount++;
                 }
 
@@ -256,18 +338,15 @@
                     day: i,
                     dateStr: dateStr,
                     isWeekend: _isWeekend,
-                    isHoliday: _isHoliday,
+                    isHoliday: isVisualHoliday,
+                    isWigilia: isWigilia,
                     isOffice: _isOffice,
-                    isVacation: _isVacation,
-                    dayOfWeek: dayOfWeek
+                    isVacation: _isVacation
                 });
             }
 
-            // Reduce working days by the number of holidays falling on Saturdays
-            // Note: If a saturday holiday occurs, it reduces the total hours in the billing period.
-            // This is independent of vacation days taken M-F.
+            // Polish Law Reduction
             workingDaysCount -= saturdayHolidayCount;
-            // Safety check to not go below 0
             if (workingDaysCount < 0) workingDaysCount = 0;
 
             const requiredDays = Math.ceil(workingDaysCount * targetPercentage);
@@ -280,6 +359,36 @@
                 requiredDays,
                 saturdayHolidayCount
             };
+        }
+
+        function updateYearlyStats() {
+            const labelEl = document.getElementById('summary-target-label');
+            if (labelEl) labelEl.innerText = Math.round(targetPercentage * 100) + '%';
+
+            let totalWorking = 0;
+            let totalRequired = 0;
+            
+            for(let m=0; m<12; m++) {
+                const data = getMonthData(m);
+                totalWorking += data.workingDaysCount; 
+                totalRequired += data.requiredDays;
+            }
+
+            const totalSelected = officeDays.length;
+
+            document.getElementById('year-working-days').innerText = totalWorking;
+            document.getElementById('year-required-days').innerText = totalRequired;
+            
+            const selectedEl = document.getElementById('year-selected-days');
+            selectedEl.innerText = totalSelected;
+            
+            if (totalSelected >= totalRequired) {
+                selectedEl.classList.remove('text-slate-700');
+                selectedEl.classList.add('text-green-600');
+            } else {
+                selectedEl.classList.remove('text-green-600');
+                selectedEl.classList.add('text-slate-700');
+            }
         }
 
         function renderCalendar() {
@@ -297,7 +406,6 @@
                 const monthCard = document.createElement('div');
                 monthCard.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col";
 
-                // Vacation Mode Toggle
                 const isVacationMode = vacationModes[m];
                 const modeBtnClass = isVacationMode 
                     ? "bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200"
@@ -305,17 +413,15 @@
                 const modeIcon = isVacationMode ? "🏖️" : "🏢";
                 const modeText = isVacationMode ? "Tryb: Urlop / L4" : "Tryb: Praca w biurze";
 
-                // Header
                 let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
                 let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
 
                 let noteHtml = '';
                 if (data.saturdayHolidayCount > 0) {
-                    const suffix = data.saturdayHolidayCount === 1 ? 'dzień' : 'dni';
                     noteHtml = `
                         <div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800 flex items-start">
                             <span class="mr-2">ℹ️</span>
-                            <span>odliczono 1 dzień z uwagi na święto w sobotę</span>
+                            <span>odliczono ${data.saturdayHolidayCount} dzień za święto w sobotę</span>
                         </div>
                     `;
                 }
@@ -335,7 +441,7 @@
                     
                     <div class="px-4 mt-3">
                         <button onclick="toggleVacationMode(${m})" class="w-full py-1.5 px-3 rounded-md text-xs font-semibold transition-colors flex items-center justify-center gap-2 ${modeBtnClass}">
-                           ${modeIcon} ${modeText}
+                            ${modeIcon} ${modeText}
                         </button>
                     </div>
 
@@ -344,7 +450,7 @@
                     <div class="p-4 flex-grow pt-2">
                         <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
                             <span>Pracujące: ${data.workingDaysCount}</span>
-                            <span>Cel (${Math.round(targetPercentage * 100)}%): ${data.requiredDays}</span>
+                            <span>Cel: ${data.requiredDays}</span>
                         </div>
 
                         <div class="grid grid-cols-7 gap-1 mb-2 text-center">
@@ -364,7 +470,7 @@
                     if (day.isHoliday) {
                         classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
                         html += `
-                            <div class="${classes}" title="Święto">
+                            <div class="${classes}" title="${day.isWigilia ? 'Wigilia' : 'Święto'}">
                                 ${day.day}
                                 <span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span>
                             </div>`;
@@ -380,13 +486,11 @@
                         } else if (day.isVacation) {
                             classes += "bg-amber-300 text-amber-900 border border-amber-400";
                         } else {
-                            // Empty day styling depends on mode slightly? No, standard.
-                            // But hover effect can hint.
                             classes += "bg-white text-slate-700 border border-slate-200 hover:border-blue-400 hover:text-blue-600";
-                            
-                            // If in vacation mode, hint via hover?
                             if (isVacationMode) {
                                 classes += " hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700";
+                            } else {
+                                classes += " hover:bg-green-50 hover:border-green-300 hover:text-green-700";
                             }
                         }
                         html += `<div class="${classes}" ${onclick}>${day.day}</div>`;
@@ -403,6 +507,9 @@
             }
         }
 
+        // Initialize
+        initYearSelector();
+        loadState();
         initTargetSelector();
         updateYearlyStats();
         renderCalendar();
