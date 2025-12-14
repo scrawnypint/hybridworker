@@ -49,14 +49,14 @@ h1::after { content: " " attr(data-year); }
 <div class="max-w-7xl mx-auto">
 <header class="mb-8 text-center">
 <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2 flex justify-center items-center gap-2 flex-wrap" id="main-title">
-Kalendarz Pracy Hybrydowej 
+Kalendarz Pracy Hybrydowej 
 <div class="relative inline-block">
 <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
 </select>
 </div>
 </h1>
 <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
-Planer obecności. Cel: 
+Planer obecności. Cel: 
 <span class="relative inline-block">
 <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
 </select>
@@ -75,7 +75,7 @@ efektywnych dni pracy.
 
 <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
 <div>
-<div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Do przepracowania <span class="current-year-display"></span></div>
+<div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Dni pracujące netto <span class="current-year-display"></span></div>
 <div class="text-xl font-bold text-slate-700" id="year-working-days">0</div>
 <div class="text-xs text-slate-400 font-normal">(po odjęciu urlopów)</div>
 </div>
@@ -99,8 +99,8 @@ efektywnych dni pracy.
 
 <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
 Dane zapisują się w pamięci przeglądarki. Uwzględniono polskie święta. <br>
-<strong>Zasada obliczeń:</strong> (Dni robocze - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
-Korekta: -1 dzień pracy za święto przypadające w sobotę (z dodatkową poprawką dla grudnia 2026).
+<strong>Zasada obliczeń:</strong> (Dni robocze - Święta Pn-Pt - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
+Zasada: za każde święto przypadające w sobotę (np. 15.08.2026) przysługuje dodatkowy dzień wolny.
 </footer>
 </div>
 
@@ -125,7 +125,7 @@ let officeDays = [];
 let vacationDays = [];
 let vacationModes = new Array(12).fill(false);
 
-// --- Easter & Holiday Logic ---
+// --- Easter & Holiday Logic (bez zmian) ---
 function getEasterDate(year) {
 const a = year % 19;
 const b = Math.floor(year / 100);
@@ -140,7 +140,7 @@ const k = c % 4;
 const l = (32 + 2 * e + 2 * i - h - k) % 7;
 const m = Math.floor((a + 11 * h + 22 * l) / 451);
 const p = (h + l - 7 * m + 114);
-const month = Math.floor(p / 31) - 1; 
+const month = Math.floor(p / 31) - 1; 
 const day = (p % 31) + 1;
 return new Date(year, month, day);
 }
@@ -167,13 +167,13 @@ h.push(`${year}-12-26`); // Boże Narodzenie 2 (9)
 // Movable Holidays (4 entries)
 const easter = getEasterDate(year);
 const easterMonday = addDays(easter, 1);
-const corpusChristi = addDays(easter, 60); 
-const pentecost = addDays(easter, 49); 
+const corpusChristi = addDays(easter, 60); 
+const pentecost = addDays(easter, 49); 
 
-h.push(formatDate(easter)); 
-h.push(formatDate(easterMonday)); 
+h.push(formatDate(easter)); 
+h.push(formatDate(easterMonday)); 
 h.push(formatDate(corpusChristi));
-h.push(formatDate(pentecost)); 
+h.push(formatDate(pentecost)); 
 
 return h;
 }
@@ -184,13 +184,15 @@ const m = String(date.getMonth() + 1).padStart(2, '0');
 const d = String(date.getDate()).padStart(2, '0');
 return `${y}-${m}-${d}`;
 }
+// --- Koniec Logiki Świąt ---
+
 
 function loadState() {
 targetPercentage = parseFloat(localStorage.getItem(`targetPercentage_${currentYear}`)) || 0.40;
 officeDays = JSON.parse(localStorage.getItem(`officeDays_${currentYear}`)) || [];
 vacationDays = JSON.parse(localStorage.getItem(`vacationDays_${currentYear}`)) || [];
 holidaysCache = calculateHolidays(currentYear);
-vacationModes = new Array(12).fill(false); 
+vacationModes = new Array(12).fill(false); 
 }
 
 function saveState() {
@@ -221,7 +223,7 @@ document.querySelectorAll('.current-year-display').forEach(el => el.innerText = 
 document.getElementById('main-title').setAttribute('data-year', currentYear);
 
 loadState();
-initTargetSelector(); 
+initTargetSelector(); 
 updateYearlyStats();
 renderCalendar();
 }
@@ -294,22 +296,19 @@ const day = date.getDay();
 return day === 0 || day === 6; // 0=Sunday, 6=Saturday
 }
 
+// --- ZMODYFIKOWANA FUNKCJA OBLICZENIOWA ---
 function getMonthData(monthIndex) {
 const date = new Date(currentYear, monthIndex, 1);
 const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
 
-let startDay = date.getDay(); 
+let startDay = date.getDay(); 
 let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
 let days = [];
-// 1. Initial count of all Mon-Fri days (23 for Dec 2026)
-let baseWorkingDaysCount = 0; 
-// 2. Count of holidays that fall on a Saturday (26.12.2026)
-let saturdayHolidayCount = 0;
-// 3. Count of planned vacation/L4 days falling on a final Working Day
-let vacationCount = 0; 
-// 4. Count of holidays that fall on a Mon-Fri (25.12.2026)
-let weekdayHolidayCount = 0; 
+let baseWorkingDaysCount = 0; // Liczba dni Pn-Pt w miesiącu
+let saturdayHolidayCount = 0; // Liczba świąt przypadających w sobotę
+let vacationCount = 0; // Liczba zaplanowanych urlopów/L4 w dni Pn-Pt, które nie są świętami
+let weekdayHolidayCount = 0; // Liczba świąt przypadających w dni Pn-Pt
 
 for (let i = 1; i <= daysInMonth; i++) {
 const currentDate = new Date(currentYear, monthIndex, i);
@@ -326,9 +325,9 @@ const _isVacation = vacationDays.includes(dateStr);
 
 // --- COUNTING LOGIC ---
 
-// 1. Base Pn-Pt 
-if (!_isWeekend) { 
-baseWorkingDaysCount++; 
+// 1. Base Pn-Pt 
+if (!_isWeekend) { 
+baseWorkingDaysCount++; 
 }
 
 // 2. Holidays on Pn-Pt (needs to be excluded from the Base)
@@ -336,7 +335,7 @@ if (!_isWeekend && isRealHoliday) {
 weekdayHolidayCount++;
 }
 
-// 3. Holidays on Saturday (compensation day granted, so -1 day to work)
+// 3. Holidays on Saturday (compensation day granted, but not deducted from working days)
 if (isRealHoliday && dayOfWeek === 6) {
 saturdayHolidayCount++;
 }
@@ -362,17 +361,10 @@ isVacation: _isVacation
 // Dni Robocze (Base Pn-Pt) - Święta Pn-Pt = Dni do Przepracowania (Base po świętach)
 let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
 
-// Dni do Przepracowania (Base) - Korekta za Święta w Sobotę
-daysToWorkBase -= saturdayHolidayCount;
-
-// --- KOREKTA SPECJALNA DLA GRUDNIA 2026 ---
-// Statutowa liczba dni pracujących w Grudniu 2026 wynosi 20 (160h). 
-// W tym konkretnym przypadku (miesiąc z 23 Pn-Pt i 1 świętem Pn-Pt, 1 świętem Sob), 
-// prosta heurystyka daje 21, co jest niepoprawne w świetle Kodeksu Pracy.
-if (currentYear === 2026 && monthIndex === 11 && daysToWorkBase === 21) {
-daysToWorkBase -= 1; // Korekcja do 20 dni, by zgadzała się ze statutową pulą.
-}
-// ------------------------------------------
+// UWAGA: Nie odejmujemy 'saturdayHolidayCount' z 'daysToWorkBase', ponieważ
+// sobota jest już domyślnie weekendem (nie dniem roboczym Pn-Pt).
+// Korekta za święto w sobotę polega na przyznaniu 1 DNIU WOLNYM, a nie odjęciu
+// 1 dnia z puli DNI PRACY Pn-Pt. Pulą do pracy jest daysToWorkBase.
 
 if (daysToWorkBase < 0) daysToWorkBase = 0;
 
@@ -390,9 +382,11 @@ firstDayOffset,
 effectiveWorkingDays,
 vacationCount,
 requiredDays,
-saturdayHolidayCount
+saturdayHolidayCount // Używane tylko do wyświetlenia notki
 };
 }
+// --- KONIEC ZMODYFIKOWANEJ FUNKCJI OBLICZENIOWEJ ---
+
 
 function updateYearlyStats() {
 const labelEl = document.getElementById('summary-target-label');
@@ -400,12 +394,14 @@ if (labelEl) labelEl.innerText = Math.round(targetPercentage * 100) + '%';
 
 let totalEffectiveWorking = 0;
 let totalRequired = 0;
+let totalSaturdayHolidays = 0;
 
 // Sum all 12 months using the correct calculation logic
 for(let m=0; m<12; m++) {
 const data = getMonthData(m);
-totalEffectiveWorking += data.effectiveWorkingDays; 
+totalEffectiveWorking += data.effectiveWorkingDays; 
 totalRequired += data.requiredDays;
+totalSaturdayHolidays += data.saturdayHolidayCount; // Sumowanie dla wyświetlenia notki rocznej
 }
 
 const totalSelected = officeDays.length;
@@ -457,61 +453,50 @@ let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor"
 let noteHtml = '';
 if (data.saturdayHolidayCount > 0) {
 noteHtml = `
-                       <div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800 flex items-start">
-                           <span class="mr-2">ℹ️</span>
-                            <span>odliczono ${data.saturdayHolidayCount} dzień za święto w sobotę</span>
-                            <span>Zastosowano korektę kodeksową: odliczono ${data.saturdayHolidayCount} dzień za święto w sobotę</span>
-                       </div>
-                   `;
+                       <div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800 flex items-start">
+                           <span class="mr-2">ℹ️</span>
+                            <span>
+                               Przez święto w sobotę (np. 15.08) przysługuje ${data.saturdayHolidayCount} dodatkowy dzień(dni) wolny do odebrania!
+                            </span>
+                       </div>
+                   `;
 }
-
-// Dodatkowa informacja o korekcie dla grudnia 2026
-if (currentYear === 2026 && m === 11) {
-noteHtml = `
-                       <div class="mx-4 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md text-xs text-yellow-800 flex items-start">
-                           <span class="mr-2">💡</span>
-                            <span>Zastosowano korektę kodeksową: statutowa liczba dni pracujących w Grudniu 2026 to 20 (160h).</span>
-                            <span>Zastosowano korektę kodeksową: odliczono 1 dzień za święto w sobotę.</span>
-                       </div>
-                   `;
-}
-
 
 let html = `
-                   <div class="p-4 border-b border-slate-100 flex justify-between items-center ${statusClass}">
-                       <h2 class="font-bold text-lg">${data.name}</h2>
-                       <div class="flex items-center gap-1">
-                           ${statusIcon}
-                           <span class="text-sm font-semibold">${currentOfficeCount}/${data.requiredDays}</span>
-                       </div>
-                   </div>
-                   
-                   <div class="w-full h-1.5 bg-slate-100">
-                       <div class="h-1.5 ${progressColor} transition-all duration-500" style="width: ${progressPercent}%"></div>
-                   </div>
-                   
-                   <div class="px-4 mt-3 flex gap-2 mode-buttons">
-                       <button onclick="setMode(${m}, false)" class="${btnBase} ${officeBtnClass}">
-                           🏢 Biuro
-                       </button>
-                       <button onclick="setMode(${m}, true)" class="${btnBase} ${vacationBtnClass}">
-                           🏖️ Urlop / L4
-                       </button>
-                   </div>
+                   <div class="p-4 border-b border-slate-100 flex justify-between items-center ${statusClass}">
+                       <h2 class="font-bold text-lg">${data.name}</h2>
+                       <div class="flex items-center gap-1">
+                           ${statusIcon}
+                           <span class="text-sm font-semibold">${currentOfficeCount}/${data.requiredDays}</span>
+                       </div>
+                   </div>
+                   
+                   <div class="w-full h-1.5 bg-slate-100">
+                       <div class="h-1.5 ${progressColor} transition-all duration-500" style="width: ${progressPercent}%"></div>
+                   </div>
+                   
+                   <div class="px-4 mt-3 flex gap-2 mode-buttons">
+                       <button onclick="setMode(${m}, false)" class="${btnBase} ${officeBtnClass}">
+                           🏢 Biuro
+                       </button>
+                       <button onclick="setMode(${m}, true)" class="${btnBase} ${vacationBtnClass}">
+                           🏖️ Urlop / L4
+                       </button>
+                   </div>
 
-                   ${noteHtml}
+                   ${noteHtml}
 
-                   <div class="p-4 flex-grow pt-2">
-                       <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
-                           <span title="Dni robocze minus ustawowe święta i urlopy (${data.vacationCount} dni)">Pracujące: ${data.effectiveWorkingDays}</span>
-                           <span>Cel: ${data.requiredDays}</span>
-                       </div>
+                   <div class="p-4 flex-grow pt-2">
+                       <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
+                           <span title="Dni robocze Pn-Pt minus ustawowe święta w Pn-Pt i urlopy (${data.vacationCount} dni)">Pracujące netto: ${data.effectiveWorkingDays}</span>
+                           <span>Cel: ${data.requiredDays}</span>
+                       </div>
 
-                       <div class="grid grid-cols-7 gap-1 mb-2 text-center">
-                           ${DAY_NAMES.map(n => `<div class="text-xs font-bold text-slate-400">${n}</div>`).join('')}
-                       </div>
-                       <div class="grid grid-cols-7 gap-1 text-sm">
-               `;
+                       <div class="grid grid-cols-7 gap-1 mb-2 text-center">
+                           ${DAY_NAMES.map(n => `<div class="text-xs font-bold text-slate-400">${n}</div>`).join('')}
+                       </div>
+                       <div class="grid grid-cols-7 gap-1 text-sm">
+               `;
 
 for (let i = 0; i < data.firstDayOffset; i++) {
 html += `<div class="aspect-square"></div>`;
@@ -523,11 +508,15 @@ let onclick = "";
 
 if (day.isHoliday) {
 classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
+// Dodatkowa visualizacja "dodatkowego dnia" (np. mała kropka?)
+let extraIndicator = day.isWeekend && holidaysCache.includes(day.dateStr) ? '<span class="absolute bottom-1 right-1 w-1.5 h-1.5 bg-orange-400 rounded-full" title="Odbiór dnia wolnego"></span>' : '';
+
 html += `
-                           <div class="${classes}" title="${day.isWigilia ? 'Wigilia (opcjonalnie wolne)' : 'Święto'}">
-                               ${day.day}
-                               <span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span>
-                           </div>`;
+                           <div class="${classes}" title="${day.isWigilia ? 'Wigilia (opcjonalnie wolne)' : 'Święto'}">
+                               ${day.day}
+                               <span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span>
+                                ${extraIndicator}
+                           </div>`;
 } else if (day.isWeekend) {
 classes += "bg-slate-100 text-slate-400 disabled cursor-default";
 html += `<div class="${classes}">${day.day}</div>`;
@@ -552,9 +541,9 @@ html += `<div class="${classes}" ${onclick}>${day.day}</div>`;
 });
 
 html += `
-                       </div>
-                   </div>
-               `;
+                       </div>
+                   </div>
+               `;
 
 monthCard.innerHTML = html;
 container.appendChild(monthCard);
