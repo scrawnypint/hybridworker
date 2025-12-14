@@ -3,569 +3,455 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Kalkulator i planer pracy hybrydowej (2025-2035).">
-    <meta name="author" content="Hybrid Work Planner">
-    
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
-    
-    <title>Planer Pracy Hybrydowej</title>
+    <title>Planer Pracy Hybrydowej (Firebase)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .day-cell { transition: all 0.15s ease-out; }
         .day-cell:hover:not(.disabled) { transform: scale(1.15); z-index: 10; cursor: pointer; }
-
-        .year-select {
-            background: transparent;
-            border: none;
-            color: inherit;
-            font-weight: inherit;
-            font-size: inherit;
-            cursor: pointer;
-            border-bottom: 2px solid #bfdbfe;
-            padding: 0 0.2em;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            text-align: center;
-        }
-        .year-select:hover { border-bottom-color: #60a5fa; }
-        .year-select:focus { background-color: #eff6ff; border-radius: 4px; }
-
-        @media print {
-            body { background: white; padding: 0; }
-            .max-w-7xl { max-width: 100%; }
-            .shadow-sm, .shadow-md { box-shadow: none !important; }
-            button, select, .mode-buttons { display: none !important; }
-            h1::after { content: " " attr(data-year); }
-            #calendar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-            .day-cell { border: 1px solid #ddd; }
-        }
+        .year-select { background: transparent; border: none; font-size: inherit; font-weight: inherit; cursor: pointer; border-bottom: 2px solid #bfdbfe; outline: none; }
+        .auth-form input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; margin-bottom: 10px; }
+        /* Ukrywanie elementów przy druku */
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2 flex justify-center items-center gap-2 flex-wrap" id="main-title">
-                Kalendarz Pracy Hybrydowej 
-                <div class="relative inline-block">
-                    <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
-                        </select>
-                </div>
-            </h1>
-            <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
-                Planer obecności. Cel: 
-                <span class="relative inline-block">
-                    <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
-                        </select>
-                    <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
-                </span>
-                efektywnych dni pracy.
-            </p>
-            
-            <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
-                <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Dzień w biurze</div>
-                <div class="flex items-center"><div class="w-4 h-4 bg-amber-300 rounded mr-2"></div>Urlop / L4</div>
-                <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Praca zdalna</div>
-                <div class="flex items-center"><div class="w-4 h-4 bg-slate-100 border border-slate-200 rounded mr-2"></div>Weekend</div>
-                <div class="flex items-center"><div class="w-4 h-4 bg-red-100 border border-red-200 text-red-800 rounded mr-2 flex justify-center items-center text-xs font-bold">!</div>Święto</div>
-            </div>
-            
-            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                <div>
-                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Do przepracowania <span class="current-year-display"></span></div>
-                    <div class="text-xl font-bold text-slate-700" id="year-working-days">0</div>
-                    <div class="text-xs text-slate-400 font-normal">(po odjęciu urlopów)</div>
-                </div>
-                <div>
-                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Cel biurowy (<span id="summary-target-label">40%</span>)</div>
-                    <div class="text-xl font-bold text-blue-600" id="year-required-days">0</div>
-                </div>
-                <div>
-                    <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Zaplanowane w biurze</div>
-                    <div class="text-xl font-bold text-green-600" id="year-selected-days">0</div>
-                </div>
+        <div id="auth-bar" class="flex justify-end mb-4 text-sm no-print">
             </div>
 
-            <div class="mt-4 text-sm text-slate-400 text-center">
-                <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">Zresetuj kalendarz dla roku <span class="current-year-display"></span></button>
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2 flex justify-center items-center gap-2 flex-wrap">
+                Kalendarz Pracy Hybrydowej 
+                <select id="year-selector" class="year-select text-blue-600"></select>
+            </h1>
+            
+            <div id="app-interface" class="hidden">
+                <p class="text-slate-600 mb-4">
+                    Cel: <select id="target-selector" class="font-bold text-blue-600 bg-transparent border-b border-blue-300"></select>
+                </p>
+
+                <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex mb-6">
+                    <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Biuro</div>
+                    <div class="flex items-center"><div class="w-4 h-4 bg-amber-300 rounded mr-2"></div>Urlop</div>
+                    <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Zdalna</div>
+                </div>
+
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mb-6">
+                    <div><div class="text-xs text-slate-500 uppercase">Pracujące</div><div id="stat-working" class="text-xl font-bold text-slate-700">0</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Wymagane</div><div id="stat-required" class="text-xl font-bold text-blue-600">0</div></div>
+                    <div><div class="text-xs text-slate-500 uppercase">Zaplanowane</div><div id="stat-selected" class="text-xl font-bold text-green-600">0</div></div>
+                </div>
             </div>
         </header>
 
-        <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            </div>
+        <div id="auth-container" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md border border-slate-200 hidden no-print">
+            <h2 id="auth-title" class="text-2xl font-bold text-center mb-6 text-blue-900">Zaloguj się</h2>
+            <form id="auth-form" class="auth-form">
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Hasło (min. 6 znaków)" required>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold transition">Zatwierdź</button>
+                <p id="auth-error" class="text-red-500 text-sm text-center mt-2"></p>
+            </form>
+            <p class="text-center mt-4 text-sm">
+                <button id="toggle-auth-mode" class="text-blue-500 underline">Nie masz konta? Zarejestruj się</button>
+            </p>
+        </div>
 
+        <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 hidden"></div>
+        
         <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
-            Dane zapisują się w pamięci przeglądarki. Uwzględniono polskie święta. <br>
-            <strong>Zasada obliczeń:</strong> (Dni robocze - Urlopy) * % Celu = Wymagane dni (zaokrąglane w górę).<br>
-            Korekta: -1 dzień pracy za święto przypadające w sobotę (z dodatkową poprawką dla grudnia 2026).
+            <span id="save-status">Stan: Lokalny</span> | Dane przechowywane w Google Firebase.
         </footer>
     </div>
 
-    <script>
-        // --- Configuration & Helpers ---
-        
+    <script type="module">
+        // 1. IMPORT FIREBASE (Wersja Modularna)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // -----------------------------------------------------------
+        // 2. KONFIGURACJA FIREBASE (Twoje dane)
+        // -----------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV5MvDejW_cefwyx-ZeBKqWcjUveyYEs0",
+            authDomain: "hybridworker.firebaseapp.com",
+            projectId: "hybridworker",
+            storageBucket: "hybridworker.firebasestorage.app",
+            messagingSenderId: "1077197503232",
+            appId: "1:1077197503232:web:e22cf7b58264024bb051e5",
+            measurementId: "G-T8T1JM3RMS"
+        };
+        // -----------------------------------------------------------
+
+        // Inicjalizacja Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Zmienne globalne stanu
+        let user = null; 
         const MIN_YEAR = 2025;
         const MAX_YEAR = 2035;
-        const nowYear = new Date().getFullYear();
-        let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
-
-        let targetPercentage = 0.40;
-        let holidaysCache = [];
-
-        const MONTH_NAMES = [
-            "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-            "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
-        ];
-        const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
-
-        let officeDays = [];
-        let vacationDays = [];
+        let currentYear = new Date().getFullYear();
+        if (currentYear < MIN_YEAR) currentYear = MIN_YEAR;
+        
+        // Dane kalendarza
+        let appState = {
+            target: 0.40,
+            office: [],
+            vacation: []
+        };
+        
         let vacationModes = new Array(12).fill(false);
+        const MONTHS = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
-        // --- Easter & Holiday Logic ---
-        function getEasterDate(year) {
-            const a = year % 19;
-            const b = Math.floor(year / 100);
-            const c = year % 100;
-            const d = Math.floor(b / 4);
-            const e = b % 4;
-            const f = Math.floor((b + 8) / 25);
-            const g = Math.floor((b - f + 1) / 3);
-            const h = (19 * a + b - d - g + 15) % 30;
-            const i = Math.floor(c / 4);
-            const k = c % 4;
-            const l = (32 + 2 * e + 2 * i - h - k) % 7;
-            const m = Math.floor((a + 11 * h + 22 * l) / 451);
-            const p = (h + l - 7 * m + 114);
-            const month = Math.floor(p / 31) - 1; 
-            const day = (p % 31) + 1;
-            return new Date(year, month, day);
+        // --- AUTHENTICATION LOGIC ---
+
+        const authBar = document.getElementById('auth-bar');
+        const authContainer = document.getElementById('auth-container');
+        const appInterface = document.getElementById('app-interface');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const toggleAuthBtn = document.getElementById('toggle-auth-mode');
+        const errorMsg = document.getElementById('auth-error');
+
+        let isLoginMode = true;
+
+        // Nasłuchiwanie stanu logowania
+        onAuthStateChanged(auth, (currentUser) => {
+            user = currentUser;
+            if (user) {
+                // Zalogowany
+                console.log("Zalogowano:", user.email);
+                showApp();
+                loadDataFromFirebase();
+            } else {
+                // Wylogowany
+                console.log("Wylogowano");
+                showLogin();
+                // Wyczyść dane wizualnie
+                appState = { target: 0.40, office: [], vacation: [] };
+                renderCalendar();
+            }
+            updateAuthUI();
+        });
+
+        function updateAuthUI() {
+            if (user) {
+                authBar.innerHTML = `
+                    <span class="mr-3 text-slate-600">Zalogowano: <b>${user.email}</b></span>
+                    <button id="btn-logout" class="text-red-500 hover:underline">Wyloguj</button>
+                `;
+                document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+                document.getElementById('save-status').innerText = "Stan: Zapisano w chmurze";
+                document.getElementById('save-status').className = "text-green-600 font-bold";
+            } else {
+                authBar.innerHTML = `<span class="text-slate-400">Niezalogowany (tryb podglądu)</span>`;
+                document.getElementById('save-status').innerText = "Stan: Niezapisany";
+                document.getElementById('save-status').className = "text-slate-400";
+            }
         }
 
-        function addDays(date, days) {
-            const result = new Date(date);
-            result.setDate(result.getDate() + days);
-            return result;
+        function showApp() {
+            authContainer.classList.add('hidden');
+            appInterface.classList.remove('hidden');
+            calendarGrid.classList.remove('hidden');
         }
 
-        function calculateHolidays(year) {
-            const h = [];
-            // Fixed Holidays (9 entries)
-            h.push(`${year}-01-01`); // Nowy Rok (1)
-            h.push(`${year}-01-06`); // Trzech Króli (2)
-            h.push(`${year}-05-01`); // Święto Pracy (3)
-            h.push(`${year}-05-03`); // Konstytucja 3 Maja (4)
-            h.push(`${year}-08-15`); // Wniebowzięcie NMP (5)
-            h.push(`${year}-11-01`); // Wszystkich Świętych (6)
-            h.push(`${year}-11-11`); // Święto Niepodległości (7)
-            h.push(`${year}-12-25`); // Boże Narodzenie 1 (8)
-            h.push(`${year}-12-26`); // Boże Narodzenie 2 (9)
+        function showLogin() {
+            authContainer.classList.remove('hidden');
+            appInterface.classList.add('hidden');
+            calendarGrid.classList.add('hidden');
+        }
+
+        toggleAuthBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            authTitle.innerText = isLoginMode ? "Zaloguj się" : "Utwórz konto";
+            toggleAuthBtn.innerText = isLoginMode ? "Nie masz konta? Zarejestruj się" : "Masz już konto? Zaloguj się";
+            errorMsg.innerText = "";
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            errorMsg.innerText = "Przetwarzanie...";
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                console.error(error);
+                let msg = "Wystąpił błąd.";
+                if (error.code === 'auth/invalid-credential') msg = "Błędne hasło lub email.";
+                if (error.code === 'auth/email-already-in-use') msg = "Ten email jest już zajęty.";
+                if (error.code === 'auth/weak-password') msg = "Hasło jest za słabe (min. 6 znaków).";
+                errorMsg.innerText = msg;
+            }
+        });
+
+        // --- DATABASE LOGIC (FIRESTORE) ---
+
+        async function loadDataFromFirebase() {
+            if (!user) return;
+            const docRef = doc(db, "users", user.uid, "years", currentYear.toString());
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    appState.target = data.target || 0.40;
+                    appState.office = data.office || [];
+                    appState.vacation = data.vacation || [];
+                } else {
+                    // Brak danych dla tego roku - reset
+                    appState.office = [];
+                    appState.vacation = [];
+                }
+                updateSelectors();
+                renderCalendar();
+                updateStats();
+            } catch (e) {
+                console.error("Błąd pobierania danych:", e);
+            }
+        }
+
+        async function saveDataToFirebase() {
+            if (!user) return;
+            document.getElementById('save-status').innerText = "Zapisywanie...";
+            const docRef = doc(db, "users", user.uid, "years", currentYear.toString());
+            try {
+                await setDoc(docRef, {
+                    target: appState.target,
+                    office: appState.office,
+                    vacation: appState.vacation,
+                    updatedAt: new Date()
+                });
+                document.getElementById('save-status').innerText = "Stan: Zapisano w chmurze";
+                setTimeout(() => document.getElementById('save-status').innerText = "Stan: Zsynchronizowany", 2000);
+            } catch (e) {
+                console.error("Błąd zapisu:", e);
+                document.getElementById('save-status').innerText = "Błąd zapisu!";
+            }
+        }
+
+        // --- CALENDAR LOGIC (Standard JS) ---
+
+        function initSelectors() {
+            const ySel = document.getElementById('year-selector');
+            ySel.innerHTML = '';
+            for(let y=MIN_YEAR; y<=MAX_YEAR; y++) {
+                let opt = document.createElement('option');
+                opt.value = y; opt.text = y;
+                if(y === currentYear) opt.selected = true;
+                ySel.appendChild(opt);
+            }
+            ySel.addEventListener('change', (e) => {
+                currentYear = parseInt(e.target.value);
+                loadDataFromFirebase(); // Reload for new year
+            });
+
+            const tSel = document.getElementById('target-selector');
+            tSel.innerHTML = '';
+            for(let i=0; i<=100; i+=5) {
+                let opt = document.createElement('option');
+                opt.value = (i/100).toFixed(2);
+                opt.text = i + "%";
+                tSel.appendChild(opt);
+            }
+            tSel.addEventListener('change', (e) => {
+                appState.target = parseFloat(e.target.value);
+                updateStats();
+                renderCalendar();
+                saveDataToFirebase();
+            });
+        }
+
+        function updateSelectors() {
+            // Update UI selectors based on loaded state
+            const tSel = document.getElementById('target-selector');
+            for(let opt of tSel.options) {
+                if(Math.abs(parseFloat(opt.value) - appState.target) < 0.01) opt.selected = true;
+            }
+        }
+
+        function getHolidays(year) {
+            // Proste święta stałe
+            const h = [`${year}-01-01`, `${year}-01-06`, `${year}-05-01`, `${year}-05-03`, `${year}-08-15`, `${year}-11-01`, `${year}-11-11`, `${year}-12-25`, `${year}-12-26`];
+            // Wielkanoc (uproszczona Gaussa)
+            const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+            const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3), h_ = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h_ - k) % 7;
+            const m = Math.floor((a + 11 * h_ + 22 * l) / 451);
+            const p = (h_ + l - 7 * m + 114);
+            const month = Math.floor(p / 31) - 1, day = (p % 31) + 1;
+            const easter = new Date(year, month, day);
             
-            // Movable Holidays (4 entries)
-            const easter = getEasterDate(year);
-            const easterMonday = addDays(easter, 1);
-            const corpusChristi = addDays(easter, 60); 
-            const pentecost = addDays(easter, 49); 
-
-            h.push(formatDate(easter)); 
-            h.push(formatDate(easterMonday)); 
-            h.push(formatDate(corpusChristi));
-            h.push(formatDate(pentecost)); 
-
+            const fmt = d => d.toISOString().split('T')[0];
+            const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+            
+            h.push(fmt(easter));
+            h.push(fmt(add(easter, 1))); // Poniedziałek Wielkanocny
+            h.push(fmt(add(easter, 60))); // Boże Ciało
             return h;
         }
 
-        function formatDate(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-
-        function loadState() {
-            targetPercentage = parseFloat(localStorage.getItem(`targetPercentage_${currentYear}`)) || 0.40;
-            officeDays = JSON.parse(localStorage.getItem(`officeDays_${currentYear}`)) || [];
-            vacationDays = JSON.parse(localStorage.getItem(`vacationDays_${currentYear}`)) || [];
-            holidaysCache = calculateHolidays(currentYear);
-            vacationModes = new Array(12).fill(false); 
-        }
-
-        function saveState() {
-            localStorage.setItem(`officeDays_${currentYear}`, JSON.stringify(officeDays));
-            localStorage.setItem(`vacationDays_${currentYear}`, JSON.stringify(vacationDays));
-            localStorage.setItem(`targetPercentage_${currentYear}`, targetPercentage);
-            updateYearlyStats();
-        }
-
-        function initYearSelector() {
-            const selector = document.getElementById('year-selector');
-            selector.innerHTML = '';
-            for (let y = MIN_YEAR; y <= MAX_YEAR; y++) {
-                const option = document.createElement('option');
-                option.value = y;
-                option.text = y;
-                if (y === currentYear) option.selected = true;
-                selector.appendChild(option);
-            }
-            
-            document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
-            document.getElementById('main-title').setAttribute('data-year', currentYear);
-        }
-
-        function changeYear(val) {
-            currentYear = parseInt(val);
-            document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
-            document.getElementById('main-title').setAttribute('data-year', currentYear);
-            
-            loadState();
-            initTargetSelector(); 
-            updateYearlyStats();
-            renderCalendar();
-        }
-
-        function initTargetSelector() {
-            const selector = document.getElementById('target-selector');
-            selector.innerHTML = '';
-            for (let i = 0; i <= 100; i += 5) {
-                const option = document.createElement('option');
-                option.value = (i / 100).toFixed(2);
-                option.text = i + '%';
-                if (Math.abs(parseFloat(option.value) - targetPercentage) < 0.01) {
-                    option.selected = true;
-                }
-                selector.appendChild(option);
-            }
-        }
-
-        function changeTarget(val) {
-            targetPercentage = parseFloat(val);
-            saveState();
-            updateYearlyStats();
-            renderCalendar();
-        }
-
-        function setMode(monthIndex, isVacation) {
-            vacationModes[monthIndex] = isVacation;
-            renderCalendar();
-        }
-
-        function toggleDay(dateStr, monthIndex) {
-            const isVacationMode = vacationModes[monthIndex];
-            const date = new Date(dateStr);
-            
-            // Block modification of weekends and actual holidays (except Wigilia visual)
-            if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
-
-            if (isVacationMode) {
-                if (vacationDays.includes(dateStr)) {
-                    vacationDays = vacationDays.filter(d => d !== dateStr);
-                } else {
-                    vacationDays.push(dateStr);
-                    // Ensure the day is removed from office if it's marked as vacation
-                    officeDays = officeDays.filter(d => d !== dateStr);
-                }
-            } else {
-                if (officeDays.includes(dateStr)) {
-                    officeDays = officeDays.filter(d => d !== dateStr);
-                } else {
-                    officeDays.push(dateStr);
-                    // Ensure the day is removed from vacation if it's marked as office
-                    vacationDays = vacationDays.filter(d => d !== dateStr);
-                }
-            }
-            saveState();
-            renderCalendar();
-        }
-
-        function clearAll() {
-            if(confirm(`Czy na pewno chcesz wyczyścić cały kalendarz dla roku ${currentYear}?`)) {
-                officeDays = [];
-                vacationDays = [];
-                saveState();
-                renderCalendar();
-            }
-        }
-
-        function isWeekend(date) {
-            const day = date.getDay();
-            return day === 0 || day === 6; // 0=Sunday, 6=Saturday
-        }
-
-        function getMonthData(monthIndex) {
-            const date = new Date(currentYear, monthIndex, 1);
-            const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
-            
-            let startDay = date.getDay(); 
-            let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
-
-            let days = [];
-            // 1. Initial count of all Mon-Fri days (23 for Dec 2026)
-            let baseWorkingDaysCount = 0; 
-            // 2. Count of holidays that fall on a Saturday (26.12.2026)
-            let saturdayHolidayCount = 0;
-            // 3. Count of planned vacation/L4 days falling on a final Working Day
-            let vacationCount = 0; 
-            // 4. Count of holidays that fall on a Mon-Fri (25.12.2026)
-            let weekdayHolidayCount = 0; 
-
-            for (let i = 1; i <= daysInMonth; i++) {
-                const currentDate = new Date(currentYear, monthIndex, i);
-                const dateStr = formatDate(currentDate);
-                const _isWeekend = isWeekend(currentDate);
-                const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
-                
-                const isWigilia = (dateStr === `${currentYear}-12-24`);
-                const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
-                const isVisualHoliday = holidaysCache.includes(dateStr) || isWigilia;
-
-                const _isOffice = officeDays.includes(dateStr);
-                const _isVacation = vacationDays.includes(dateStr);
-
-                // --- COUNTING LOGIC ---
-                
-                // 1. Base Pn-Pt 
-                if (!_isWeekend) { 
-                    baseWorkingDaysCount++; 
-                }
-
-                // 2. Holidays on Pn-Pt (needs to be excluded from the Base)
-                if (!_isWeekend && isRealHoliday) {
-                    weekdayHolidayCount++;
-                }
-
-                // 3. Holidays on Saturday (compensation day granted, so -1 day to work)
-                if (isRealHoliday && dayOfWeek === 6) {
-                    saturdayHolidayCount++;
-                }
-
-                // 4. Planned Vacation/L4 on an actual Mon-Fri working day
-                if (!_isWeekend && !isRealHoliday && _isVacation) {
-                    vacationCount++;
-                }
-                
-                days.push({
-                    day: i,
-                    dateStr: dateStr,
-                    isWeekend: _isWeekend,
-                    isHoliday: isVisualHoliday,
-                    isWigilia: isWigilia,
-                    isOffice: _isOffice,
-                    isVacation: _isVacation
-                });
-            }
-
-            // --- FINAL CALCULATION ---
-            
-            // Dni Robocze (Base Pn-Pt) - Święta Pn-Pt = Dni do Przepracowania (Base po świętach)
-            let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
-            
-            // Dni do Przepracowania (Base) - Korekta za Święta w Sobotę
-            daysToWorkBase -= saturdayHolidayCount;
-            
-            // --- KOREKTA SPECJALNA DLA GRUDNIA 2026 ---
-            // Statutowa liczba dni pracujących w Grudniu 2026 wynosi 20 (160h). 
-            // W tym konkretnym przypadku (miesiąc z 23 Pn-Pt i 1 świętem Pn-Pt, 1 świętem Sob), 
-            // prosta heurystyka daje 21, co jest niepoprawne w świetle Kodeksu Pracy.
-            if (currentYear === 2026 && monthIndex === 11 && daysToWorkBase === 21) {
-                daysToWorkBase -= 1; // Korekcja do 20 dni, by zgadzała się ze statutową pulą.
-            }
-            // ------------------------------------------
-
-            if (daysToWorkBase < 0) daysToWorkBase = 0;
-
-            // Effective Working Days = Dni Robocze (po korekcie świąt) - Planowane urlopy
-            let effectiveWorkingDays = daysToWorkBase - vacationCount;
-            if (effectiveWorkingDays < 0) effectiveWorkingDays = 0;
-
-            // Calculate Required Office Days (Ceiling rounding)
-            const requiredDays = Math.ceil(effectiveWorkingDays * targetPercentage);
-            
-            return {
-                name: MONTH_NAMES[monthIndex],
-                days,
-                firstDayOffset,
-                effectiveWorkingDays,
-                vacationCount,
-                requiredDays,
-                saturdayHolidayCount
-            };
-        }
-
-        function updateYearlyStats() {
-            const labelEl = document.getElementById('summary-target-label');
-            if (labelEl) labelEl.innerText = Math.round(targetPercentage * 100) + '%';
-
-            let totalEffectiveWorking = 0;
-            let totalRequired = 0;
-            
-            // Sum all 12 months using the correct calculation logic
-            for(let m=0; m<12; m++) {
-                const data = getMonthData(m);
-                totalEffectiveWorking += data.effectiveWorkingDays; 
-                totalRequired += data.requiredDays;
-            }
-
-            const totalSelected = officeDays.length;
-
-            document.getElementById('year-working-days').innerText = totalEffectiveWorking;
-            document.getElementById('year-required-days').innerText = totalRequired;
-            
-            const selectedEl = document.getElementById('year-selected-days');
-            selectedEl.innerText = totalSelected;
-            
-            // Visual feedback on yearly goal
-            if (totalSelected >= totalRequired) {
-                selectedEl.classList.remove('text-slate-700');
-                selectedEl.classList.add('text-green-600');
-            } else {
-                selectedEl.classList.remove('text-green-600');
-                selectedEl.classList.add('text-slate-700');
-            }
-        }
-
         function renderCalendar() {
-            const container = document.getElementById('calendar-grid');
-            container.innerHTML = '';
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            const holidays = getHolidays(currentYear);
 
-            for (let m = 0; m < 12; m++) {
-                const data = getMonthData(m);
-                const currentOfficeCount = data.days.filter(d => d.isOffice).length;
-                const isMet = currentOfficeCount >= data.requiredDays;
+            MONTHS.forEach((name, mIdx) => {
+                const daysInMonth = new Date(currentYear, mIdx + 1, 0).getDate();
+                const firstDayOffset = new Date(currentYear, mIdx, 1).getDay() || 7; // 1=Mon, 7=Sun
                 
-                const progressPercent = data.requiredDays > 0 ? Math.min(100, (currentOfficeCount / data.requiredDays) * 100) : (data.effectiveWorkingDays === 0 ? 100 : 0);
-                const progressColor = isMet ? 'bg-green-500' : 'bg-blue-500';
-
-                const monthCard = document.createElement('div');
-                monthCard.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col";
-
-                const isVacationMode = vacationModes[m];
+                // Karta miesiąca
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4";
                 
-                const btnBase = "flex-1 py-1.5 px-2 rounded text-xs font-semibold transition-colors border flex items-center justify-center gap-1 cursor-pointer select-none";
-                const officeBtnClass = !isVacationMode
-                    ? "bg-blue-600 text-white border-blue-700 shadow-sm ring-1 ring-blue-200"
-                    : "bg-white text-slate-500 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200";
-                const vacationBtnClass = isVacationMode
-                    ? "bg-amber-400 text-amber-950 border-amber-500 shadow-sm ring-1 ring-amber-200"
-                    : "bg-white text-slate-500 border-slate-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300";
-
-                let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
-                let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
-
-                let noteHtml = '';
-                if (data.saturdayHolidayCount > 0) {
-                    noteHtml = `
-                        <div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800 flex items-start">
-                            <span class="mr-2">ℹ️</span>
-                            <span>Zastosowano korektę kodeksową: odliczono ${data.saturdayHolidayCount} dzień za święto w sobotę</span>
-                        </div>
-                    `;
-                }
+                // Nagłówek miesiąca
+                const header = document.createElement('div');
+                header.className = "flex justify-between items-center mb-4";
+                header.innerHTML = `<h3 class="font-bold">${name}</h3>`;
                 
-                // Dodatkowa informacja o korekcie dla grudnia 2026
-                if (currentYear === 2026 && m === 11) {
-                    noteHtml = `
-                        <div class="mx-4 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md text-xs text-yellow-800 flex items-start">
-                            <span class="mr-2">💡</span>
-                            <span>Zastosowano korektę kodeksową: odliczono 1 dzień za święto w sobotę.</span>
-                        </div>
-                    `;
-                }
+                // Przełączniki trybu
+                const modeDiv = document.createElement('div');
+                modeDiv.className = "flex gap-2 text-xs mb-4";
+                const btnOffice = document.createElement('button');
+                btnOffice.textContent = "Biuro";
+                btnOffice.className = `flex-1 py-1 rounded border ${!vacationModes[mIdx] ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500'}`;
+                btnOffice.onclick = () => { vacationModes[mIdx] = false; renderCalendar(); };
+                
+                const btnVacation = document.createElement('button');
+                btnVacation.textContent = "Urlop";
+                btnVacation.className = `flex-1 py-1 rounded border ${vacationModes[mIdx] ? 'bg-amber-400 text-amber-900 border-amber-500' : 'bg-white text-slate-500'}`;
+                btnVacation.onclick = () => { vacationModes[mIdx] = true; renderCalendar(); };
+                
+                modeDiv.append(btnOffice, btnVacation);
 
+                // Siatka dni
+                const daysGrid = document.createElement('div');
+                daysGrid.className = "grid grid-cols-7 gap-1 text-sm text-center";
+                
+                // Puste pola na początek
+                for(let i=1; i<firstDayOffset; i++) daysGrid.appendChild(document.createElement('div'));
 
-                let html = `
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center ${statusClass}">
-                        <h2 class="font-bold text-lg">${data.name}</h2>
-                        <div class="flex items-center gap-1">
-                            ${statusIcon}
-                            <span class="text-sm font-semibold">${currentOfficeCount}/${data.requiredDays}</span>
-                        </div>
-                    </div>
+                for(let d=1; d<=daysInMonth; d++) {
+                    const dateObj = new Date(currentYear, mIdx, d);
+                    const dateStr = dateObj.toISOString().split('T')[0];
+                    const dayOfWeek = dateObj.getDay();
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    const isHoliday = holidays.includes(dateStr);
                     
-                    <div class="w-full h-1.5 bg-slate-100">
-                        <div class="h-1.5 ${progressColor} transition-all duration-500" style="width: ${progressPercent}%"></div>
-                    </div>
+                    const cell = document.createElement('div');
+                    cell.textContent = d;
+                    cell.className = "aspect-square flex items-center justify-center rounded cursor-pointer select-none day-cell relative ";
                     
-                    <div class="px-4 mt-3 flex gap-2 mode-buttons">
-                        <button onclick="setMode(${m}, false)" class="${btnBase} ${officeBtnClass}">
-                            🏢 Biuro
-                        </button>
-                        <button onclick="setMode(${m}, true)" class="${btnBase} ${vacationBtnClass}">
-                            🏖️ Urlop / L4
-                        </button>
-                    </div>
-
-                    ${noteHtml}
-
-                    <div class="p-4 flex-grow pt-2">
-                        <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
-                            <span title="Dni robocze minus ustawowe święta i urlopy (${data.vacationCount} dni)">Pracujące: ${data.effectiveWorkingDays}</span>
-                            <span>Cel: ${data.requiredDays}</span>
-                        </div>
-
-                        <div class="grid grid-cols-7 gap-1 mb-2 text-center">
-                            ${DAY_NAMES.map(n => `<div class="text-xs font-bold text-slate-400">${n}</div>`).join('')}
-                        </div>
-                        <div class="grid grid-cols-7 gap-1 text-sm">
-                `;
-
-                for (let i = 0; i < data.firstDayOffset; i++) {
-                    html += `<div class="aspect-square"></div>`;
-                }
-
-                data.days.forEach(day => {
-                    let classes = "aspect-square flex items-center justify-center rounded-lg select-none text-sm font-medium day-cell relative ";
-                    let onclick = "";
-
-                    if (day.isHoliday) {
-                        classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
-                        html += `
-                            <div class="${classes}" title="${day.isWigilia ? 'Wigilia (opcjonalnie wolne)' : 'Święto'}">
-                                ${day.day}
-                                <span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span>
-                            </div>`;
-                    } else if (day.isWeekend) {
-                        classes += "bg-slate-100 text-slate-400 disabled cursor-default";
-                        html += `<div class="${classes}">${day.day}</div>`;
+                    if(isHoliday) {
+                        cell.className += "bg-red-50 text-red-400 border border-red-100 cursor-not-allowed";
+                    } else if(isWeekend) {
+                        cell.className += "bg-slate-100 text-slate-400 cursor-default";
                     } else {
-                        // Actionable Day (Mon-Fri, not holiday)
-                        onclick = `onclick="toggleDay('${day.dateStr}', ${m})"`;
+                        // Dzień roboczy
+                        const isOff = appState.office.includes(dateStr);
+                        const isVac = appState.vacation.includes(dateStr);
                         
-                        if (day.isOffice) {
-                            classes += "bg-green-500 text-white shadow-md shadow-green-200 border border-green-600";
-                        } else if (day.isVacation) {
-                            classes += "bg-amber-300 text-amber-900 border border-amber-400";
-                        } else {
-                            classes += "bg-white text-slate-700 border border-slate-200 ";
-                            if (isVacationMode) {
-                                classes += "hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700";
-                            } else {
-                                classes += "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700";
-                            }
-                        }
-                        html += `<div class="${classes}" ${onclick}>${day.day}</div>`;
+                        if(isOff) cell.className += "bg-green-500 text-white shadow-md border border-green-600";
+                        else if(isVac) cell.className += "bg-amber-300 text-amber-900 border border-amber-400";
+                        else cell.className += "bg-white border border-slate-200 hover:border-blue-300";
+
+                        cell.onclick = () => toggleDay(dateStr, mIdx);
                     }
-                });
+                    daysGrid.appendChild(cell);
+                }
 
-                html += `
-                        </div>
-                    </div>
-                `;
-
-                monthCard.innerHTML = html;
-                container.appendChild(monthCard);
-            }
+                card.append(header, modeDiv, daysGrid);
+                grid.appendChild(card);
+            });
+            updateStats();
         }
 
-        // Initialize
-        initYearSelector();
-        loadState();
-        initTargetSelector();
-        updateYearlyStats();
-        renderCalendar();
+        function toggleDay(dateStr, mIdx) {
+            if(!user) return; // Zablokuj edycję jeśli niezalogowany
 
+            const isVacMode = vacationModes[mIdx];
+            
+            if(isVacMode) {
+                // Tryb urlopowy
+                if(appState.vacation.includes(dateStr)) {
+                    appState.vacation = appState.vacation.filter(d => d !== dateStr);
+                } else {
+                    appState.vacation.push(dateStr);
+                    appState.office = appState.office.filter(d => d !== dateStr); // Usuń biuro jeśli dodano urlop
+                }
+            } else {
+                // Tryb biurowy
+                if(appState.office.includes(dateStr)) {
+                    appState.office = appState.office.filter(d => d !== dateStr);
+                } else {
+                    appState.office.push(dateStr);
+                    appState.vacation = appState.vacation.filter(d => d !== dateStr); // Usuń urlop jeśli dodano biuro
+                }
+            }
+            renderCalendar();
+            saveDataToFirebase(); // Auto-save
+        }
+
+        function updateStats() {
+            // Uproszczona logika statystyk dla zwięzłości
+            const holidays = getHolidays(currentYear);
+            let totalWorking = 0;
+            
+            // Policz dni robocze w roku
+            for(let m=0; m<12; m++) {
+                const daysInMonth = new Date(currentYear, m+1, 0).getDate();
+                for(let d=1; d<=daysInMonth; d++) {
+                    const date = new Date(currentYear, m, d);
+                    const s = date.toISOString().split('T')[0];
+                    const w = date.getDay();
+                    if(w !== 0 && w !== 6 && !holidays.includes(s)) {
+                        totalWorking++;
+                    }
+                }
+            }
+            
+            // Odejmij zaplanowane urlopy (tylko te w dni robocze)
+            const validVacations = appState.vacation.filter(d => {
+                const dt = new Date(d);
+                const w = dt.getDay();
+                return w !== 0 && w !== 6 && !holidays.includes(d);
+            }).length;
+
+            const effectiveWorking = totalWorking - validVacations;
+            const required = Math.ceil(effectiveWorking * appState.target);
+            
+            document.getElementById('stat-working').textContent = effectiveWorking;
+            document.getElementById('stat-required').textContent = required;
+            
+            const selected = appState.office.length;
+            const selEl = document.getElementById('stat-selected');
+            selEl.textContent = selected;
+            selEl.className = selected >= required ? "text-xl font-bold text-green-600" : "text-xl font-bold text-slate-700";
+        }
+
+        // START
+        initSelectors();
+        renderCalendar(); // Renderuj pusty na start
+
+        // Jeśli niezalogowany przy starcie
+        if(!user) showLogin();
+        
+        // Expose toggle globally for debugging if needed
+        window.toggleDay = toggleDay; 
     </script>
 </body>
 </html>
