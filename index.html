@@ -368,7 +368,7 @@
 
     // --- CONSTANTS & STATE ---
     const MIN_YEAR = 2025;
-    const MAX_YEAR = 2035;
+    const MAX_YEAR = 2099; // extended to 2099
     const nowYear = new Date().getFullYear();
     let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
     let targetPercentage = 0.40;
@@ -547,11 +547,9 @@
     }
 
     function openResetScreen() {
-        // Prefill reset email with what's typed in auth screen
         const authEmail = document.getElementById('auth-email').value.trim();
         resetEmailInput.value = authEmail;
 
-        // Hide any previous messages
         authError.classList.add('hidden');
         resetError.classList.add('hidden');
         resetInfo.classList.add('hidden');
@@ -595,7 +593,6 @@
                     message = "Invalid email address.";
                     break;
                 case 'auth/user-not-found':
-                    // You can choose a more generic message to avoid user enumeration.
                     message = "No user found with this email address.";
                     break;
                 case 'auth/network-request-failed':
