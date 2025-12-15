@@ -202,9 +202,7 @@
                 </div>
             </h1>
         </div>
-        text
-        text
-
+        
         <!-- User & sync status -->
         <div class="flex justify-center items-center gap-3 mb-4 flex-wrap">
             <span class="text-slate-500 text-sm" id="user-email-display"></span>
@@ -420,7 +418,7 @@
                 break;
             case 'saved':
                 cloudIcon.textContent = '✅';
-                cloudText.textContent = 'Saved to cloud';
+                cloudText.textContent = 'Saved';
                 break;
             case 'error':
                 cloudIcon.textContent = '❌';
@@ -1094,8 +1092,8 @@
             let absenceSummary = '';
             if (data.vacationCount > 0 || data.sickLeaveCount > 0) {
                 const parts = [];
-                if (data.vacationCount > 0) parts.push(`${data.vacationCount}v`);
-                if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount}s`);
+                if (data.vacationCount > 0) parts.push(`${data.vacationCount} V`);
+                if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount} SL`);
                 absenceSummary = `<span class="text-amber-600">(${parts.join('/')})</span>`;
             }
 
