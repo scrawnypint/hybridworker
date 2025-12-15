@@ -150,7 +150,7 @@
     </button>
 
     <p class="text-center mt-3 text-xs">
-        <button type="button" onclick="handlePasswordReset()" class="text-blue-500 hover:text-blue-700 underline">
+        <button type="button" onclick="openResetScreen()" class="text-blue-500 hover:text-blue-700 underline">
             Forgot your password?
         </button>
     </p>
@@ -191,6 +191,32 @@
         <button id="auth-toggle-btn" onclick="toggleAuthMode()"
                 class="text-blue-500 hover:text-blue-700 font-medium">
             Don't have an account? Register!
+        </button>
+    </p>
+</div>
+
+<!-- Password reset screen -->
+<div id="reset-screen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl border border-slate-200 hidden">
+    <h2 class="text-3xl font-bold text-blue-800 mb-2 text-center">Reset password</h2>
+    <p class="text-slate-500 text-sm text-center mb-6">
+        Enter your email address and we will send you a link to reset your password.
+    </p>
+
+    <div id="reset-error" class="text-red-600 mb-3 text-center hidden p-3 bg-red-50 rounded-lg border border-red-200"></div>
+    <div id="reset-info" class="text-green-700 mb-3 text-center hidden p-3 bg-green-50 rounded-lg border border-green-200"></div>
+
+    <input type="email" id="reset-email" placeholder="Email address"
+           class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
+
+    <button type="button" onclick="submitPasswordReset()"
+            class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+        Send reset link
+    </button>
+
+    <p class="text-center mt-4 text-sm">
+        <button type="button" onclick="backToSignIn()"
+                class="text-blue-500 hover:text-blue-700 font-medium">
+            Back to sign in
         </button>
     </p>
 </div>
@@ -387,6 +413,7 @@
 
     // --- DOM ELEMENTS ---
     const authScreen = document.getElementById('auth-screen');
+    const resetScreen = document.getElementById('reset-screen');
     const calendarApp = document.getElementById('calendar-app');
     const authTitle = document.getElementById('auth-title');
     const authMainBtn = document.getElementById('auth-main-btn');
@@ -403,6 +430,10 @@
     const cloudIcon = document.getElementById('cloud-icon');
     const cloudText = document.getElementById('cloud-text');
     const vacationLimitInput = document.getElementById('vacation-limit-input');
+
+    const resetEmailInput = document.getElementById('reset-email');
+    const resetError = document.getElementById('reset-error');
+    const resetInfo = document.getElementById('reset-info');
 
     // --- HELPERS ---
     function showLoading(text = 'Loading...') {
@@ -515,12 +546,37 @@
         }
     }
 
-    async function handlePasswordReset() {
-        authError.classList.add('hidden');
-        const email = document.getElementById('auth-email').value.trim();
+    function openResetScreen() {
+        // Prefill reset email with what's typed in auth screen
+        const authEmail = document.getElementById('auth-email').value.trim();
+        resetEmailInput.value = authEmail;
 
+        // Hide any previous messages
+        authError.classList.add('hidden');
+        resetError.classList.add('hidden');
+        resetInfo.classList.add('hidden');
+
+        authScreen.style.display = 'none';
+        resetScreen.style.display = 'block';
+    }
+
+    function backToSignIn() {
+        resetError.classList.add('hidden');
+        resetInfo.classList.add('hidden');
+        resetEmailInput.value = '';
+
+        resetScreen.style.display = 'none';
+        authScreen.style.display = 'block';
+    }
+
+    async function submitPasswordReset() {
+        resetError.classList.add('hidden');
+        resetInfo.classList.add('hidden');
+
+        const email = resetEmailInput.value.trim();
         if (!email) {
-            showAuthError("Please enter your email address to reset your password.");
+            resetError.textContent = "Please enter your email address.";
+            resetError.classList.remove('hidden');
             return;
         }
 
@@ -528,7 +584,8 @@
 
         try {
             await sendPasswordResetEmail(auth, email);
-            alert("If an account exists for this email, a password reset link has been sent.");
+            resetInfo.textContent = "If an account exists for this email, a password reset link has been sent.";
+            resetInfo.classList.remove('hidden');
         } catch (error) {
             console.error("Password reset error:", error.code);
             let message = "Could not send password reset email. Please try again.";
@@ -538,7 +595,7 @@
                     message = "Invalid email address.";
                     break;
                 case 'auth/user-not-found':
-                    // You can choose a more generic message to avoid user enumeration:
+                    // You can choose a more generic message to avoid user enumeration.
                     message = "No user found with this email address.";
                     break;
                 case 'auth/network-request-failed':
@@ -546,7 +603,8 @@
                     break;
             }
 
-            showAuthError(message);
+            resetError.textContent = message;
+            resetError.classList.remove('hidden');
         } finally {
             hideLoading();
         }
@@ -668,6 +726,7 @@
         currentUserID = user.uid;
         currentUserEmail = user.email;
         authScreen.style.display = 'none';
+        resetScreen.style.display = 'none';
         calendarApp.style.display = 'block';
         userEmailDisplay.textContent = currentUserEmail;
         await initCalendarApp();
@@ -685,6 +744,7 @@
         currentUserID = null;
         currentUserEmail = null;
         authScreen.style.display = 'block';
+        resetScreen.style.display = 'none';
         calendarApp.style.display = 'none';
         officeDays = [];
         vacationDays = [];
@@ -692,6 +752,9 @@
         document.getElementById('auth-email').value = '';
         document.getElementById('auth-password').value = '';
         authError.classList.add('hidden');
+        resetError.classList.add('hidden');
+        resetInfo.classList.add('hidden');
+        resetEmailInput.value = '';
     }
 
     // --- FIRESTORE ---
@@ -1250,8 +1313,10 @@
 
     // --- GLOBAL EXPORTS ---
     window.handleAuth = handleAuth;
-    window.handlePasswordReset = handlePasswordReset;
     window.toggleAuthMode = toggleAuthMode;
+    window.openResetScreen = openResetScreen;
+    window.backToSignIn = backToSignIn;
+    window.submitPasswordReset = submitPasswordReset;
     window.signInWithGoogle = signInWithGoogle;
     window.signInWithMicrosoft = signInWithMicrosoft;
     window.signOutUser = signOutUser;
