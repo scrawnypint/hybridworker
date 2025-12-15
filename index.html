@@ -1014,7 +1014,7 @@
             let absenceSummary = '';
             if (data.vacationCount > 0 || data.sickLeaveCount > 0) {
                 const parts = [];
-                if (data.vacationCount > 0) parts.push(`${data.vacationCount}u`);
+                if (data.vacationCount > 0) parts.push(`${data.vacationCount}U`);
                 if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount}L4`);
                 absenceSummary = `<span class="text-amber-600">(${parts.join('/')})</span>`;
             }
