@@ -47,6 +47,17 @@ text-align: center;
     display: none;
 }
 
+/* Animacja przycisku Google */
+#google-auth-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+#google-auth-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
 @media print {
 body { background: white; padding: 0; }
 .max-w-7xl { max-width: 100%; }
@@ -66,18 +77,18 @@ h1::after { content: " " attr(data-year); }
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p class="text-sm text-slate-600">Ładowanie danych...</p>
+        <p class="text-sm text-slate-600" id="loading-text">Ładowanie danych...</p>
     </div>
 </div>
 
 <div id="auth-screen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl border border-slate-200">
     <h2 class="text-3xl font-bold text-blue-800 mb-6 text-center" id="auth-title">Zaloguj się</h2>
-    <div id="auth-error" class="text-red-600 mb-4 text-center hidden"></div>
+    <div id="auth-error" class="text-red-600 mb-4 text-center hidden p-3 bg-red-50 rounded-lg border border-red-200"></div>
     
     <input type="email" id="auth-email" placeholder="Adres E-mail" class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
     <input type="password" id="auth-password" placeholder="Hasło" class="w-full p-3 mb-6 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
     
-    <button id="auth-main-btn" onclick="handleAuth()" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md">
+    <button id="auth-main-btn" onclick="handleAuth()" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
         Zaloguj
     </button>
     
@@ -90,11 +101,11 @@ h1::after { content: " " attr(data-year); }
     <button id="google-auth-btn" onclick="signInWithGoogle()" class="w-full py-3 mt-4 flex items-center justify-center bg-white text-slate-700 font-semibold rounded-lg border border-slate-300 hover:bg-slate-50 transition shadow-sm">
         <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.4l6.62-6.5C34.33 3.6 29.47 2 24 2 15.3 2 7.76 6.13 3.96 12.55l7.98 6.19C13.25 14.54 18.06 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M11.94 18.66c-.19.5-.32 1.03-.32 1.59s.13 1.09.32 1.59l-7.98 6.19C3.07 26.68 2.5 24.32 2.5 22c0-2.32.57-4.68 1.44-6.84l7.98 3.5zm22.09 11.23c-1.07 2.45-2.88 4.67-5.06 6.36l6.23 4.88C39.46 36.68 41.6 33.5 42.66 30.56H24v-6.06h18.24c-.23 1.29-.82 2.76-1.78 4.09z"/>
-            <path fill="#34A853" d="M24 44c5.16 0 9.87-1.99 13.4-5.22l-6.23-4.88c-1.88 1.15-4.15 1.84-7.17 1.84-5.83 0-10.64-5.04-12.35-11.83l-7.98-6.19C8.83 36.87 15.3 44 24 44z"/>
-            <path fill="none" d="M0 0h48v48H0z"/>
+            <path fill="#4285F4" d="M46.5 24c0-1.64-.15-3.22-.42-4.74H24v9.49h12.7c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C43.64 38.48 46.5 31.77 46.5 24z"/>
+            <path fill="#FBBC05" d="M11.94 28.34c-.63-1.87-.99-3.86-.99-5.91s.36-4.04.99-5.91L3.96 10.33C1.96 14.16 1 18.41 1 23c0 4.59.96 8.84 2.96 12.67l7.98-7.33z"/>
+            <path fill="#34A853" d="M24 47c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 40.53 14.54 47 24 47z"/>
         </svg>
-        Zaloguj przez Google
+        <span id="google-btn-text">Zaloguj przez Google</span>
     </button>
     
     <p class="text-center mt-6 text-sm">
@@ -173,7 +184,9 @@ import {
     createUserWithEmailAndPassword, 
     signOut,
     GoogleAuthProvider, 
-    signInWithPopup     
+    signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
 
 import { 
@@ -198,7 +211,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app); 
+
+// --- KONFIGURACJA GOOGLE PROVIDER ---
 const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+googleProvider.setCustomParameters({
+    prompt: 'select_account' // Zawsze pokazuj wybór konta
+});
 
 // --- ZMIENNE KODU ---
 const MIN_YEAR = 2025;
@@ -222,6 +242,7 @@ let vacationModes = new Array(12).fill(false);
 // --- UI / AUTORYZACJA ---
 let isLoginMode = true; 
 let currentUserID = null;
+let isGoogleSignInInProgress = false; // Flaga zapobiegająca wielokrotnemu kliknięciu
 
 const authScreen = document.getElementById('auth-screen');
 const calendarApp = document.getElementById('calendar-app');
@@ -230,11 +251,26 @@ const authMainBtn = document.getElementById('auth-main-btn');
 const authToggleBtn = document.getElementById('auth-toggle-btn');
 const authError = document.getElementById('auth-error');
 const googleAuthBtn = document.getElementById('google-auth-btn');
+const googleBtnText = document.getElementById('google-btn-text');
 const loadingIndicator = document.getElementById('loading-indicator');
+const loadingText = document.getElementById('loading-text');
 
-function showLoading() { loadingIndicator.style.display = 'block'; }
+function showLoading(text = 'Ładowanie danych...') { 
+    loadingText.textContent = text;
+    loadingIndicator.style.display = 'block'; 
+}
 function hideLoading() { loadingIndicator.style.display = 'none'; }
 
+function setGoogleButtonLoading(isLoading) {
+    googleAuthBtn.disabled = isLoading;
+    if (isLoading) {
+        googleBtnText.textContent = 'Logowanie...';
+        googleAuthBtn.classList.add('opacity-70');
+    } else {
+        googleBtnText.textContent = 'Zaloguj przez Google';
+        googleAuthBtn.classList.remove('opacity-70');
+    }
+}
 
 function toggleAuthMode() {
     isLoginMode = !isLoginMode;
@@ -256,7 +292,7 @@ async function handleAuth() {
         return;
     }
 
-    showLoading();
+    showLoading(isLoginMode ? 'Logowanie...' : 'Rejestracja...');
     try {
         if (isLoginMode) {
             await signInWithEmailAndPassword(auth, email, password);
@@ -264,13 +300,30 @@ async function handleAuth() {
             await createUserWithEmailAndPassword(auth, email, password);
         }
     } catch (error) {
+        console.error("Błąd autoryzacji:", error.code, error.message);
         let message = "Wystąpił błąd autoryzacji. Spróbuj ponownie.";
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            message = "Nieprawidłowy e-mail lub hasło.";
-        } else if (error.code === 'auth/email-already-in-use') {
-            message = "Ten e-mail jest już zajęty. Spróbuj się zalogować.";
-        } else if (error.code === 'auth/weak-password') {
-            message = "Hasło musi mieć co najmniej 6 znaków.";
+        
+        switch(error.code) {
+            case 'auth/wrong-password':
+            case 'auth/user-not-found':
+            case 'auth/invalid-credential':
+                message = "Nieprawidłowy e-mail lub hasło.";
+                break;
+            case 'auth/email-already-in-use':
+                message = "Ten e-mail jest już zajęty. Spróbuj się zalogować.";
+                break;
+            case 'auth/weak-password':
+                message = "Hasło musi mieć co najmniej 6 znaków.";
+                break;
+            case 'auth/invalid-email':
+                message = "Nieprawidłowy format adresu e-mail.";
+                break;
+            case 'auth/too-many-requests':
+                message = "Zbyt wiele prób. Poczekaj chwilę i spróbuj ponownie.";
+                break;
+            case 'auth/network-request-failed':
+                message = "Błąd sieci. Sprawdź połączenie internetowe.";
+                break;
         }
         showAuthError(message);
     } finally {
@@ -279,32 +332,132 @@ async function handleAuth() {
     }
 }
 
+// --- POPRAWIONE LOGOWANIE GOOGLE ---
 async function signInWithGoogle() {
+    // Zapobiegaj wielokrotnemu kliknięciu
+    if (isGoogleSignInInProgress) {
+        console.log("Logowanie Google już w toku...");
+        return;
+    }
+    
+    isGoogleSignInInProgress = true;
     authError.classList.add('hidden');
-    googleAuthBtn.disabled = true;
+    setGoogleButtonLoading(true);
 
-    showLoading();
     try {
-        await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-        let message = "Wystąpił błąd logowania przez Google.";
-        console.error("Błąd Google Auth:", error);
+        console.log("🔄 Rozpoczynam logowanie przez Google (popup)...");
         
-        if (error.code === 'auth/popup-closed-by-user') {
-            message = "Logowanie zostało anulowane przez użytkownika.";
-        } else if (error.code === 'auth/cancelled-popup-request') {
-             message = "Prośba o logowanie została anulowana (spróbuj kliknąć ponownie).";
+        const result = await signInWithPopup(auth, googleProvider);
+        
+        // Sukces - logowanie obsłuży onAuthStateChanged
+        console.log("✅ Zalogowano przez Google:", result.user.email);
+        
+    } catch (error) {
+        console.error("❌ Błąd Google Auth:", error.code, error.message);
+        
+        let message = "Wystąpił błąd logowania przez Google.";
+        let shouldTryRedirect = false;
+        
+        switch(error.code) {
+            case 'auth/popup-closed-by-user':
+                message = "Okno logowania zostało zamknięte. Spróbuj ponownie.";
+                break;
+                
+            case 'auth/cancelled-popup-request':
+                message = "Anulowano poprzednią próbę. Kliknij ponownie.";
+                break;
+                
+            case 'auth/popup-blocked':
+                message = "Popup zablokowany! Próbuję alternatywną metodę...";
+                shouldTryRedirect = true;
+                break;
+                
+            case 'auth/operation-not-allowed':
+                message = "⚠️ Logowanie Google nie jest włączone w Firebase Console. Skontaktuj się z administratorem.";
+                break;
+                
+            case 'auth/account-exists-with-different-credential':
+                message = "Konto z tym emailem już istnieje (użyj innej metody logowania).";
+                break;
+                
+            case 'auth/network-request-failed':
+                message = "Błąd sieci. Sprawdź połączenie internetowe.";
+                break;
+                
+            case 'auth/unauthorized-domain':
+                message = "⚠️ Ta domena nie jest autoryzowana. Skontaktuj się z administratorem.";
+                break;
+                
+            case 'auth/internal-error':
+                message = "Wewnętrzny błąd Firebase. Spróbuj ponownie za chwilę.";
+                break;
+                
+            case 'auth/user-disabled':
+                message = "To konto zostało zablokowane.";
+                break;
+                
+            default:
+                message = `Błąd logowania: ${error.code || error.message}`;
         }
+        
+        // Jeśli popup został zablokowany, spróbuj redirect
+        if (shouldTryRedirect) {
+            try {
+                console.log("🔄 Próbuję logowanie przez redirect...");
+                showLoading('Przekierowanie do Google...');
+                await signInWithRedirect(auth, googleProvider);
+                // Nie docieramy tutaj - nastąpi przekierowanie
+                return;
+            } catch (redirectError) {
+                console.error("❌ Błąd redirect:", redirectError);
+                message = "Nie można zalogować. Odblokuj popupy dla tej strony i spróbuj ponownie.";
+            }
+        }
+        
         showAuthError(message);
+        
     } finally {
-        googleAuthBtn.disabled = false;
+        isGoogleSignInInProgress = false;
+        setGoogleButtonLoading(false);
         hideLoading();
     }
 }
 
+// Obsługa powrotu z redirect (dla urządzeń mobilnych i zablokowanych popupów)
+async function handleRedirectResult() {
+    try {
+        console.log("🔍 Sprawdzam wynik redirect...");
+        const result = await getRedirectResult(auth);
+        
+        if (result) {
+            console.log("✅ Zalogowano przez Google (redirect):", result.user.email);
+            // onAuthStateChanged obsłuży resztę
+        } else {
+            console.log("ℹ️ Brak wyniku redirect (normalne przy pierwszym ładowaniu)");
+        }
+    } catch (error) {
+        console.error("❌ Błąd obsługi redirect:", error.code, error.message);
+        
+        let message = "Błąd logowania przez Google. Spróbuj ponownie.";
+        
+        switch(error.code) {
+            case 'auth/account-exists-with-different-credential':
+                message = "Konto z tym emailem już istnieje (użyj innej metody logowania).";
+                break;
+            case 'auth/credential-already-in-use':
+                message = "Te dane logowania są już używane przez inne konto.";
+                break;
+            case 'auth/operation-not-allowed':
+                message = "⚠️ Logowanie Google nie jest włączone.";
+                break;
+        }
+        
+        showAuthError(message);
+    }
+}
 
 function showAuthError(message) {
-    authError.innerText = message;
+    authError.innerHTML = message;
     authError.classList.remove('hidden');
 }
 
@@ -317,9 +470,12 @@ async function setCurrentUser(uid) {
 }
 
 function signOutUser() {
-    signOut(auth).catch((error) => {
-        console.error("Błąd wylogowania:", error);
-    });
+    if (confirm('Czy na pewno chcesz się wylogować?')) {
+        signOut(auth).catch((error) => {
+            console.error("Błąd wylogowania:", error);
+            alert("Błąd wylogowania. Spróbuj ponownie.");
+        });
+    }
 }
 
 function unsetCurrentUser() {
@@ -329,6 +485,7 @@ function unsetCurrentUser() {
     
     document.getElementById('auth-email').value = '';
     document.getElementById('auth-password').value = '';
+    authError.classList.add('hidden');
 }
 
 // --- FIRESTORE LOGIC ---
@@ -338,7 +495,7 @@ const getYearField = () => `calendarData.${currentYear}`;
 
 
 async function loadState() {
-    showLoading();
+    showLoading('Ładowanie kalendarza...');
     try {
         const docRef = getDocRef();
         const docSnap = await getDoc(docRef);
@@ -784,12 +941,20 @@ async function initCalendarApp() {
     renderCalendar();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    showLoading(); 
+// --- INICJALIZACJA PRZY ŁADOWANIU STRONY ---
+document.addEventListener('DOMContentLoaded', async () => {
+    showLoading('Inicjalizacja...'); 
+    
+    // Najpierw sprawdź czy wracamy z redirect (Google login na mobile/zablokowane popupy)
+    await handleRedirectResult();
+    
+    // Nasłuchuj zmian stanu autoryzacji
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            console.log("👤 Użytkownik zalogowany:", user.email);
             await setCurrentUser(user.uid);
         } else {
+            console.log("👤 Użytkownik wylogowany");
             unsetCurrentUser();
         }
         hideLoading();
