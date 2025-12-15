@@ -55,47 +55,41 @@ body { font-family: 'Inter', sans-serif; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Status zapisu */
-#save-status {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 14px;
+/* Status zapisu w chmurze */
+#cloud-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: 500;
-    z-index: 100;
-    opacity: 0;
-    transform: translateY(10px);
     transition: all 0.3s ease;
-    pointer-events: none;
 }
-#save-status.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-#save-status.saving {
+#cloud-status.saving {
     background: #dbeafe;
     color: #1e40af;
 }
-#save-status.saved {
+#cloud-status.saved {
     background: #dcfce7;
     color: #166534;
 }
-#save-status.error {
+#cloud-status.error {
     background: #fee2e2;
     color: #991b1b;
 }
+#cloud-status.loading {
+    background: #f3f4f6;
+    color: #6b7280;
+}
 
-@media print {
-    body { background: white; padding: 0; }
-    .max-w-7xl { max-width: 100%; }
-    .shadow-sm, .shadow-md { box-shadow: none !important; }
-    button, select, .mode-buttons, .no-print { display: none !important; }
-    h1::after { content: " " attr(data-year); }
-    #calendar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .day-cell { border: 1px solid #ddd; }
-    #save-status { display: none !important; }
+/* Animacja pulsowania dla ikony chmury */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.cloud-saving {
+    animation: pulse 1s infinite;
 }
 </style>
 </head>
@@ -112,14 +106,11 @@ body { font-family: 'Inter', sans-serif; }
     </div>
 </div>
 
-<!-- Status zapisu -->
-<div id="save-status">
-    <span id="save-status-text"></span>
-</div>
-
 <!-- Ekran logowania -->
 <div id="auth-screen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl border border-slate-200">
-    <h2 class="text-3xl font-bold text-blue-800 mb-6 text-center" id="auth-title">Zaloguj się</h2>
+    <h2 class="text-3xl font-bold text-blue-800 mb-2 text-center" id="auth-title">Zaloguj się</h2>
+    <p class="text-slate-500 text-sm text-center mb-6">Twój kalendarz zostanie zapisany w chmurze</p>
+    
     <div id="auth-error" class="text-red-600 mb-4 text-center hidden p-3 bg-red-50 rounded-lg border border-red-200"></div>
     
     <input type="email" id="auth-email" placeholder="Adres E-mail" class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
@@ -155,7 +146,7 @@ body { font-family: 'Inter', sans-serif; }
 <!-- Aplikacja kalendarza -->
 <div id="calendar-app" class="max-w-7xl mx-auto">
     <header class="mb-8 text-center">
-        <div class="flex justify-center items-center gap-2 mb-2">
+        <div class="flex justify-center items-center gap-3 mb-2 flex-wrap">
             <h1 class="text-3xl md:text-4xl font-bold text-blue-900 flex items-center gap-2 flex-wrap justify-center" id="main-title">
                 Kalendarz Pracy Hybrydowej 
                 <div class="relative inline-block">
@@ -165,7 +156,14 @@ body { font-family: 'Inter', sans-serif; }
             </h1>
         </div>
         
-        <p class="text-slate-500 text-sm mb-1" id="user-email-display"></p>
+        <!-- Status użytkownika i synchronizacji -->
+        <div class="flex justify-center items-center gap-3 mb-4 flex-wrap">
+            <span class="text-slate-500 text-sm" id="user-email-display"></span>
+            <div id="cloud-status" class="saved">
+                <span id="cloud-icon">☁️</span>
+                <span id="cloud-text">Zapisano</span>
+            </div>
+        </div>
         
         <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
             Cel: 
@@ -209,10 +207,7 @@ body { font-family: 'Inter', sans-serif; }
             </div>
         </div>
 
-        <div class="mt-4 text-sm text-slate-400 text-center flex flex-wrap justify-center gap-4 no-print">
-            <button onclick="window.print()" class="text-purple-500 hover:text-purple-700 underline text-xs flex items-center gap-1">
-                🖨️ Drukuj
-            </button>
+        <div class="mt-4 text-sm text-slate-400 text-center flex flex-wrap justify-center gap-4">
             <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">
                 🗑️ Zresetuj rok <span class="current-year-display"></span>
             </button>
@@ -226,8 +221,8 @@ body { font-family: 'Inter', sans-serif; }
     </div>
 
     <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
-        ☁️ Dane zapisują się automatycznie w chmurze. <br>
-        <strong>Obliczenia:</strong> (Dni robocze - Nieobecności) × % Celu = Wymagane dni w biurze.
+        ☁️ Twoje dane są automatycznie zapisywane w chmurze Firebase.<br>
+        Po ponownym zalogowaniu zobaczysz swój kalendarz w ostatnim zapisanym stanie.
     </footer>
 </div>
 
@@ -299,6 +294,7 @@ let currentUserID = null;
 let currentUserEmail = null;
 let isGoogleSignInInProgress = false;
 let saveTimeout = null;
+let isSaving = false;
 
 // --- ELEMENTY DOM ---
 const authScreen = document.getElementById('auth-screen');
@@ -311,9 +307,10 @@ const googleAuthBtn = document.getElementById('google-auth-btn');
 const googleBtnText = document.getElementById('google-btn-text');
 const loadingIndicator = document.getElementById('loading-indicator');
 const loadingText = document.getElementById('loading-text');
-const saveStatus = document.getElementById('save-status');
-const saveStatusText = document.getElementById('save-status-text');
 const userEmailDisplay = document.getElementById('user-email-display');
+const cloudStatus = document.getElementById('cloud-status');
+const cloudIcon = document.getElementById('cloud-icon');
+const cloudText = document.getElementById('cloud-text');
 
 // --- FUNKCJE POMOCNICZE ---
 function showLoading(text = 'Ładowanie...') { 
@@ -325,14 +322,28 @@ function hideLoading() {
     loadingIndicator.style.display = 'none'; 
 }
 
-function showSaveStatus(type, message) {
-    saveStatus.className = 'visible ' + type;
-    saveStatusText.textContent = message;
+function updateCloudStatus(status) {
+    cloudStatus.className = status;
+    cloudIcon.className = '';
     
-    if (type === 'saved' || type === 'error') {
-        setTimeout(() => {
-            saveStatus.classList.remove('visible');
-        }, 2000);
+    switch(status) {
+        case 'saving':
+            cloudIcon.textContent = '☁️';
+            cloudIcon.className = 'cloud-saving';
+            cloudText.textContent = 'Zapisywanie...';
+            break;
+        case 'saved':
+            cloudIcon.textContent = '✅';
+            cloudText.textContent = 'Zapisano w chmurze';
+            break;
+        case 'error':
+            cloudIcon.textContent = '❌';
+            cloudText.textContent = 'Błąd zapisu';
+            break;
+        case 'loading':
+            cloudIcon.textContent = '🔄';
+            cloudText.textContent = 'Ładowanie...';
+            break;
     }
 }
 
@@ -475,13 +486,13 @@ async function setCurrentUser(user) {
     authScreen.style.display = 'none';
     calendarApp.style.display = 'block';
     
-    userEmailDisplay.textContent = `Zalogowano jako: ${currentUserEmail}`;
+    userEmailDisplay.textContent = currentUserEmail;
     
     await initCalendarApp();
 }
 
 function signOutUser() {
-    if (confirm('Czy na pewno chcesz się wylogować?')) {
+    if (confirm('Czy na pewno chcesz się wylogować?\nTwoje dane są bezpiecznie zapisane w chmurze.')) {
         signOut(auth).catch((error) => {
             console.error("Błąd wylogowania:", error);
         });
@@ -494,39 +505,63 @@ function unsetCurrentUser() {
     authScreen.style.display = 'block';
     calendarApp.style.display = 'none';
     
+    // Wyczyść dane lokalne
+    officeDays = [];
+    vacationDays = [];
+    sickLeaveDays = [];
+    
     document.getElementById('auth-email').value = '';
     document.getElementById('auth-password').value = '';
     authError.classList.add('hidden');
 }
 
-// --- FIREBASE FIRESTORE ---
-const getDocRef = () => doc(db, "users", currentUserID);
+// --- FIREBASE FIRESTORE - ZAPIS I ODCZYT ---
+function getDocRef() {
+    return doc(db, "users", currentUserID);
+}
 
 async function loadState() {
+    updateCloudStatus('loading');
     showLoading('Ładowanie Twojego kalendarza...');
+    
     try {
         const docRef = getDocRef();
         const docSnap = await getDoc(docRef);
 
-        let data = {};
-        if (docSnap.exists() && docSnap.data().calendarData && docSnap.data().calendarData[currentYear]) {
-            data = docSnap.data().calendarData[currentYear];
-            console.log(`✅ Załadowano dane dla roku ${currentYear}`);
+        if (docSnap.exists()) {
+            const userData = docSnap.data();
+            
+            // Ładuj dane dla wybranego roku
+            if (userData.calendarData && userData.calendarData[currentYear]) {
+                const yearData = userData.calendarData[currentYear];
+                
+                targetPercentage = parseFloat(yearData.targetPercentage) || 0.40;
+                officeDays = yearData.officeDays || [];
+                vacationDays = yearData.vacationDays || [];
+                sickLeaveDays = yearData.sickLeaveDays || [];
+                
+                console.log(`✅ Załadowano dane dla roku ${currentYear}:`, {
+                    officeDays: officeDays.length,
+                    vacationDays: vacationDays.length,
+                    sickLeaveDays: sickLeaveDays.length
+                });
+            } else {
+                console.log(`ℹ️ Brak zapisanych danych dla roku ${currentYear}, używam domyślnych`);
+                resetToDefaults();
+            }
         } else {
-            console.log(`ℹ️ Brak zapisanych danych dla roku ${currentYear}`);
+            console.log("ℹ️ Nowy użytkownik - tworzę profil");
+            resetToDefaults();
+            // Zapisz początkowy stan dla nowego użytkownika
+            await saveState();
         }
-
-        targetPercentage = parseFloat(data.targetPercentage) || 0.40;
-        officeDays = data.officeDays || [];
-        vacationDays = data.vacationDays || [];
-        sickLeaveDays = data.sickLeaveDays || [];
+        
+        updateCloudStatus('saved');
         
     } catch (e) {
-        console.error("Błąd ładowania:", e);
-        targetPercentage = 0.40;
-        officeDays = [];
-        vacationDays = [];
-        sickLeaveDays = [];
+        console.error("❌ Błąd ładowania:", e);
+        updateCloudStatus('error');
+        resetToDefaults();
     } finally {
         holidaysCache = calculateHolidays(currentYear);
         monthModes = new Array(12).fill(MODE_OFFICE);
@@ -534,37 +569,59 @@ async function loadState() {
     }
 }
 
+function resetToDefaults() {
+    targetPercentage = 0.40;
+    officeDays = [];
+    vacationDays = [];
+    sickLeaveDays = [];
+}
+
 async function saveState() {
-    // Debounce - czekaj 500ms przed zapisem
-    if (saveTimeout) clearTimeout(saveTimeout);
+    // Anuluj poprzedni timeout jeśli istnieje
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
     
-    showSaveStatus('saving', '💾 Zapisywanie...');
+    // Pokaż status zapisywania natychmiast
+    updateCloudStatus('saving');
     
+    // Debounce - czekaj 800ms przed zapisem
     saveTimeout = setTimeout(async () => {
+        if (isSaving) return;
+        isSaving = true;
+        
         const dataToSave = {
             targetPercentage: targetPercentage,
-            officeDays: officeDays,
-            vacationDays: vacationDays,
-            sickLeaveDays: sickLeaveDays,
+            officeDays: [...officeDays],
+            vacationDays: [...vacationDays],
+            sickLeaveDays: [...sickLeaveDays],
             lastUpdated: new Date().toISOString()
         };
 
         try {
             await setDoc(getDocRef(), { 
                 email: currentUserEmail,
+                lastLogin: new Date().toISOString(),
                 calendarData: {
                     [currentYear]: dataToSave
                 }
             }, { merge: true });
 
-            console.log("✅ Zapisano w Firebase");
-            showSaveStatus('saved', '✅ Zapisano');
-            updateYearlyStats();
+            console.log(`✅ Zapisano w Firebase dla roku ${currentYear}:`, {
+                officeDays: officeDays.length,
+                vacationDays: vacationDays.length,
+                sickLeaveDays: sickLeaveDays.length
+            });
+            
+            updateCloudStatus('saved');
+            
         } catch (e) {
             console.error("❌ Błąd zapisu:", e);
-            showSaveStatus('error', '❌ Błąd zapisu');
+            updateCloudStatus('error');
+        } finally {
+            isSaving = false;
         }
-    }, 500);
+    }, 800);
 }
 
 // --- LOGIKA KALENDARZA ---
@@ -704,15 +761,17 @@ function toggleDay(dateStr, monthIndex) {
     }
     
     saveState();
+    updateYearlyStats();
     renderCalendar();
 }
 
 function clearAll() {
-    if(confirm(`Wyczyścić kalendarz dla roku ${currentYear}?`)) {
+    if(confirm(`Wyczyścić wszystkie zaznaczenia dla roku ${currentYear}?\n\nTa operacja usunie wszystkie dni biurowe, urlopy i L4.`)) {
         officeDays = [];
         vacationDays = [];
         sickLeaveDays = [];
         saveState();
+        updateYearlyStats();
         renderCalendar();
     }
 }
@@ -917,13 +976,13 @@ function renderCalendar() {
 
                 if (day.isOffice) {
                     classes += "bg-green-500 text-white shadow-md shadow-green-200 border border-green-600";
-                    title = "Biuro";
+                    title = "Dzień w biurze";
                 } else if (day.isVacation) {
                     classes += "bg-amber-400 text-white shadow-md shadow-amber-200 border border-amber-500";
                     title = "Urlop";
                 } else if (day.isSickLeave) {
                     classes += "bg-rose-400 text-white shadow-md shadow-rose-200 border border-rose-500";
-                    title = "L4";
+                    title = "Zwolnienie lekarskie (L4)";
                 } else {
                     classes += "bg-white text-slate-700 border border-slate-200 ";
                     if (currentMode === MODE_VACATION) {
@@ -933,7 +992,7 @@ function renderCalendar() {
                     } else {
                         classes += "hover:bg-green-50 hover:border-green-300";
                     }
-                    title = "Praca zdalna";
+                    title = "Praca zdalna (kliknij aby zmienić)";
                 }
                 html += `<div class="${classes}" ${onclick} title="${title}">${day.day}</div>`;
             }
