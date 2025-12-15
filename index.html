@@ -55,7 +55,6 @@ body { font-family: 'Inter', sans-serif; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Status zapisu w chmurze */
 #cloud-status {
     display: inline-flex;
     align-items: center;
@@ -83,7 +82,6 @@ body { font-family: 'Inter', sans-serif; }
     color: #6b7280;
 }
 
-/* Animacja pulsowania dla ikony chmury */
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
@@ -207,6 +205,14 @@ body { font-family: 'Inter', sans-serif; }
             </div>
         </div>
 
+        <!-- Informacja o dodatkowych dniach wolnych za święta w sobotę -->
+        <div id="saturday-holidays-info" class="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-100 text-sm hidden">
+            <div class="flex items-center justify-center gap-2 text-purple-700">
+                <span class="text-lg">🎁</span>
+                <span><strong id="saturday-holidays-count">0</strong> dodatkowy dzień wolny w roku <span class="current-year-display"></span> (święto wypadające w sobotę)</span>
+            </div>
+        </div>
+
         <div class="mt-4 text-sm text-slate-400 text-center flex flex-wrap justify-center gap-4">
             <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">
                 🗑️ Zresetuj rok <span class="current-year-display"></span>
@@ -280,6 +286,19 @@ const MONTH_NAMES = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec
                      "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
+// Nazwy świąt
+const HOLIDAY_NAMES = {
+    '01-01': 'Nowy Rok',
+    '01-06': 'Trzech Króli',
+    '05-01': 'Święto Pracy',
+    '05-03': 'Święto Konstytucji 3 Maja',
+    '08-15': 'Wniebowzięcie NMP',
+    '11-01': 'Wszystkich Świętych',
+    '11-11': 'Święto Niepodległości',
+    '12-25': 'Boże Narodzenie',
+    '12-26': 'Drugi dzień Bożego Narodzenia'
+};
+
 const MODE_OFFICE = 'office';
 const MODE_VACATION = 'vacation';
 const MODE_SICK = 'sick';
@@ -311,6 +330,8 @@ const userEmailDisplay = document.getElementById('user-email-display');
 const cloudStatus = document.getElementById('cloud-status');
 const cloudIcon = document.getElementById('cloud-icon');
 const cloudText = document.getElementById('cloud-text');
+const saturdayHolidaysInfo = document.getElementById('saturday-holidays-info');
+const saturdayHolidaysCount = document.getElementById('saturday-holidays-count');
 
 // --- FUNKCJE POMOCNICZE ---
 function showLoading(text = 'Ładowanie...') { 
@@ -505,7 +526,6 @@ function unsetCurrentUser() {
     authScreen.style.display = 'block';
     calendarApp.style.display = 'none';
     
-    // Wyczyść dane lokalne
     officeDays = [];
     vacationDays = [];
     sickLeaveDays = [];
@@ -515,7 +535,7 @@ function unsetCurrentUser() {
     authError.classList.add('hidden');
 }
 
-// --- FIREBASE FIRESTORE - ZAPIS I ODCZYT ---
+// --- FIREBASE FIRESTORE ---
 function getDocRef() {
     return doc(db, "users", currentUserID);
 }
@@ -531,7 +551,6 @@ async function loadState() {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // Ładuj dane dla wybranego roku
             if (userData.calendarData && userData.calendarData[currentYear]) {
                 const yearData = userData.calendarData[currentYear];
                 
@@ -540,19 +559,14 @@ async function loadState() {
                 vacationDays = yearData.vacationDays || [];
                 sickLeaveDays = yearData.sickLeaveDays || [];
                 
-                console.log(`✅ Załadowano dane dla roku ${currentYear}:`, {
-                    officeDays: officeDays.length,
-                    vacationDays: vacationDays.length,
-                    sickLeaveDays: sickLeaveDays.length
-                });
+                console.log(`✅ Załadowano dane dla roku ${currentYear}`);
             } else {
-                console.log(`ℹ️ Brak zapisanych danych dla roku ${currentYear}, używam domyślnych`);
+                console.log(`ℹ️ Brak danych dla roku ${currentYear}`);
                 resetToDefaults();
             }
         } else {
-            console.log("ℹ️ Nowy użytkownik - tworzę profil");
+            console.log("ℹ️ Nowy użytkownik");
             resetToDefaults();
-            // Zapisz początkowy stan dla nowego użytkownika
             await saveState();
         }
         
@@ -577,15 +591,12 @@ function resetToDefaults() {
 }
 
 async function saveState() {
-    // Anuluj poprzedni timeout jeśli istnieje
     if (saveTimeout) {
         clearTimeout(saveTimeout);
     }
     
-    // Pokaż status zapisywania natychmiast
     updateCloudStatus('saving');
     
-    // Debounce - czekaj 800ms przed zapisem
     saveTimeout = setTimeout(async () => {
         if (isSaving) return;
         isSaving = true;
@@ -607,12 +618,7 @@ async function saveState() {
                 }
             }, { merge: true });
 
-            console.log(`✅ Zapisano w Firebase dla roku ${currentYear}:`, {
-                officeDays: officeDays.length,
-                vacationDays: vacationDays.length,
-                sickLeaveDays: sickLeaveDays.length
-            });
-            
+            console.log(`✅ Zapisano w Firebase dla roku ${currentYear}`);
             updateCloudStatus('saved');
             
         } catch (e) {
@@ -663,6 +669,48 @@ function calculateHolidays(year) {
     h.push(formatDate(addDays(easter, 60)));
 
     return h;
+}
+
+// Funkcja zwracająca święta wypadające w sobotę
+function getSaturdayHolidays(year) {
+    const saturdayHolidays = [];
+    const holidays = calculateHolidays(year);
+    
+    holidays.forEach(dateStr => {
+        const date = new Date(dateStr);
+        if (date.getDay() === 6) { // Sobota
+            const monthDay = dateStr.slice(5); // "MM-DD"
+            const holidayName = HOLIDAY_NAMES[monthDay] || getMovingHolidayName(dateStr, year);
+            saturdayHolidays.push({
+                date: dateStr,
+                name: holidayName,
+                formattedDate: formatPolishDate(date)
+            });
+        }
+    });
+    
+    return saturdayHolidays;
+}
+
+function getMovingHolidayName(dateStr, year) {
+    const easter = getEasterDate(year);
+    const easterStr = formatDate(easter);
+    const easterMondayStr = formatDate(addDays(easter, 1));
+    const pentecostStr = formatDate(addDays(easter, 49));
+    const corpusChristiStr = formatDate(addDays(easter, 60));
+    
+    if (dateStr === easterStr) return 'Wielkanoc';
+    if (dateStr === easterMondayStr) return 'Poniedziałek Wielkanocny';
+    if (dateStr === pentecostStr) return 'Zesłanie Ducha Świętego';
+    if (dateStr === corpusChristiStr) return 'Boże Ciało';
+    return 'Święto';
+}
+
+function formatPolishDate(date) {
+    const day = date.getDate();
+    const monthNames = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
+                        'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+    return `${day} ${monthNames[date.getMonth()]}`;
 }
 
 function formatDate(date) {
@@ -784,6 +832,7 @@ function getMonthData(monthIndex) {
     let days = [];
     let baseWorkingDaysCount = 0;
     let saturdayHolidayCount = 0;
+    let saturdayHolidayNames = [];
     let vacationCount = 0;
     let sickLeaveCount = 0;
     let weekdayHolidayCount = 0;
@@ -804,7 +853,15 @@ function getMonthData(monthIndex) {
 
         if (!_isWeekend) baseWorkingDaysCount++;
         if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
-        if (isRealHoliday && dayOfWeek === 6) saturdayHolidayCount++;
+        
+        // Zliczaj święta w sobotę (dla informacji, nie dla obliczeń)
+        if (isRealHoliday && dayOfWeek === 6) {
+            saturdayHolidayCount++;
+            const monthDay = dateStr.slice(5);
+            const name = HOLIDAY_NAMES[monthDay] || getMovingHolidayName(dateStr, currentYear);
+            saturdayHolidayNames.push(name);
+        }
+        
         if (!_isWeekend && !isRealHoliday && _isVacation) vacationCount++;
         if (!_isWeekend && !isRealHoliday && _isSickLeave) sickLeaveCount++;
 
@@ -820,8 +877,8 @@ function getMonthData(monthIndex) {
         });
     }
 
-    let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount - saturdayHolidayCount;
-    if (currentYear === 2026 && monthIndex === 11 && daysToWorkBase === 21) daysToWorkBase -= 1;
+    // ZMIANA: Nie odejmujemy saturdayHolidayCount - święto w sobotę nie zmniejsza dni roboczych
+    let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
     if (daysToWorkBase < 0) daysToWorkBase = 0;
 
     let effectiveWorkingDays = daysToWorkBase - vacationCount - sickLeaveCount;
@@ -837,7 +894,8 @@ function getMonthData(monthIndex) {
         vacationCount,
         sickLeaveCount,
         requiredDays,
-        saturdayHolidayCount
+        saturdayHolidayCount,
+        saturdayHolidayNames
     };
 }
 
@@ -848,6 +906,7 @@ function updateYearlyStats() {
     let totalRequired = 0;
     let totalVacation = 0;
     let totalSick = 0;
+    let totalSaturdayHolidays = 0;
 
     for (let m = 0; m < 12; m++) {
         const data = getMonthData(m);
@@ -855,6 +914,7 @@ function updateYearlyStats() {
         totalRequired += data.requiredDays;
         totalVacation += data.vacationCount;
         totalSick += data.sickLeaveCount;
+        totalSaturdayHolidays += data.saturdayHolidayCount;
     }
 
     document.getElementById('year-working-days').innerText = totalEffectiveWorking;
@@ -862,6 +922,18 @@ function updateYearlyStats() {
     document.getElementById('year-absence-days').innerText = totalVacation + totalSick;
     document.getElementById('vacation-count').innerText = totalVacation;
     document.getElementById('sick-count').innerText = totalSick;
+
+    // Aktualizuj informację o świętach w sobotę
+    if (totalSaturdayHolidays > 0) {
+        const saturdayHolidays = getSaturdayHolidays(currentYear);
+        const holidaysList = saturdayHolidays.map(h => `${h.name} (${h.formattedDate})`).join(', ');
+        
+        saturdayHolidaysCount.textContent = totalSaturdayHolidays;
+        saturdayHolidaysInfo.title = `Święta wypadające w sobotę: ${holidaysList}`;
+        saturdayHolidaysInfo.classList.remove('hidden');
+    } else {
+        saturdayHolidaysInfo.classList.add('hidden');
+    }
 
     const selectedEl = document.getElementById('year-selected-days');
     selectedEl.innerText = officeDays.length;
@@ -905,12 +977,15 @@ function renderCalendar() {
         let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
         let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
 
+        // Notka o święcie w sobotę - informacja o dodatkowym dniu wolnym
         let noteHtml = '';
         if (data.saturdayHolidayCount > 0) {
-            noteHtml = `<div class="mx-4 mt-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-md text-xs text-orange-800">ℹ️ Korekta: -${data.saturdayHolidayCount} dzień (święto w sobotę)</div>`;
-        }
-        if (currentYear === 2026 && m === 11) {
-            noteHtml = `<div class="mx-4 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md text-xs text-yellow-800">💡 Grudzień 2026: 20 dni roboczych</div>`;
+            const holidayNames = data.saturdayHolidayNames.join(', ');
+            noteHtml = `
+                <div class="mx-4 mt-2 px-3 py-2 bg-purple-50 border border-purple-100 rounded-md text-xs text-purple-800">
+                    🎁 <strong>${data.saturdayHolidayCount} dodatkowy dzień wolny</strong> do wykorzystania (${holidayNames} wypada w sobotę)
+                </div>
+            `;
         }
 
         let absenceSummary = '';
@@ -966,7 +1041,8 @@ function renderCalendar() {
 
             if (day.isHoliday) {
                 classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
-                title = day.isWigilia ? 'Wigilia' : 'Święto';
+                const monthDay = day.dateStr.slice(5);
+                title = day.isWigilia ? 'Wigilia' : (HOLIDAY_NAMES[monthDay] || getMovingHolidayName(day.dateStr, currentYear));
                 html += `<div class="${classes}" title="${title}">${day.day}<span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span></div>`;
             } else if (day.isWeekend) {
                 classes += "bg-slate-100 text-slate-400 disabled cursor-default";
