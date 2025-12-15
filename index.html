@@ -149,6 +149,12 @@
         Sign in
     </button>
 
+    <p class="text-center mt-3 text-xs">
+        <button type="button" onclick="handlePasswordReset()" class="text-blue-500 hover:text-blue-700 underline">
+            Forgot your password?
+        </button>
+    </p>
+
     <div class="mt-4 flex items-center justify-center">
         <div class="w-full border-t border-slate-200"></div>
         <div class="px-3 text-sm text-slate-400">OR</div>
@@ -299,7 +305,8 @@
         OAuthProvider,
         signInWithPopup,
         signInWithRedirect,
-        getRedirectResult
+        getRedirectResult,
+        sendPasswordResetEmail
     } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
     import {
         getFirestore,
@@ -504,6 +511,43 @@
             showAuthError(message);
         } finally {
             authMainBtn.disabled = false;
+            hideLoading();
+        }
+    }
+
+    async function handlePasswordReset() {
+        authError.classList.add('hidden');
+        const email = document.getElementById('auth-email').value.trim();
+
+        if (!email) {
+            showAuthError("Please enter your email address to reset your password.");
+            return;
+        }
+
+        showLoading('Sending password reset email...');
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            alert("If an account exists for this email, a password reset link has been sent.");
+        } catch (error) {
+            console.error("Password reset error:", error.code);
+            let message = "Could not send password reset email. Please try again.";
+
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    message = "Invalid email address.";
+                    break;
+                case 'auth/user-not-found':
+                    // You can choose a more generic message to avoid user enumeration:
+                    message = "No user found with this email address.";
+                    break;
+                case 'auth/network-request-failed':
+                    message = "Network error.";
+                    break;
+            }
+
+            showAuthError(message);
+        } finally {
             hideLoading();
         }
     }
@@ -1206,6 +1250,7 @@
 
     // --- GLOBAL EXPORTS ---
     window.handleAuth = handleAuth;
+    window.handlePasswordReset = handlePasswordReset;
     window.toggleAuthMode = toggleAuthMode;
     window.signInWithGoogle = signInWithGoogle;
     window.signInWithMicrosoft = signInWithMicrosoft;
