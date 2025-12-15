@@ -7,9 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script> <style>
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 body { font-family: 'Inter', sans-serif; }
 .day-cell { transition: all 0.15s ease-out; }
@@ -109,14 +107,14 @@ h1::after { content: " " attr(data-year); }
 <div id="calendar-app" class="max-w-7xl mx-auto">
     <header class="mb-8 text-center">
         <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2 flex justify-center items-center gap-2 flex-wrap" id="main-title">
-            Kalendarz Pracy Hybrydowej 
+            Kalendarz Pracy Hybrydowej 
             <div class="relative inline-block">
                 <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
                 </select>
             </div>
         </h1>
         <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
-            Planer obecności. Cel: 
+            Planer obecności. Cel: 
             <span class="relative inline-block">
                 <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
                 </select>
@@ -178,13 +176,12 @@ import {
     signInWithPopup     
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
 
-// Importujemy funkcje Firestore
 import { 
     getFirestore, 
     doc, 
     getDoc, 
     setDoc 
-} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js'; // DODANO FIRESTORE
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
 
 // --- KONFIGURACJA FIREBASE ---
@@ -198,14 +195,12 @@ const firebaseConfig = {
     measurementId: "G-T8T1JM3RMS"
 };
 
-// Inicjalizacja Firebase, Autoryzacji i Firestore
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app); // INICJALIZACJA FIRESTORE
+const db = getFirestore(app); 
 const googleProvider = new GoogleAuthProvider();
 
-
-// --- KONFIGURACJA I ZMIENNE KODU 2 ---
+// --- ZMIENNE KODU ---
 const MIN_YEAR = 2025;
 const MAX_YEAR = 2035;
 const nowYear = new Date().getFullYear();
@@ -224,7 +219,7 @@ let officeDays = [];
 let vacationDays = [];
 let vacationModes = new Array(12).fill(false);
 
-// --- ZMIENNE I FUNKCJE KODU 1 (AUTORYZACJA) ---
+// --- UI / AUTORYZACJA ---
 let isLoginMode = true; 
 let currentUserID = null;
 
@@ -336,9 +331,8 @@ function unsetCurrentUser() {
     document.getElementById('auth-password').value = '';
 }
 
-// --- ZMODYFIKOWANE FUNKCJE ZAPISU I ODCZYTU DANYCH (FIRESTORE) ---
+// --- FIRESTORE LOGIC ---
 
-// Zamiast LocalStorage, używamy teraz Firestore
 const getDocRef = () => doc(db, "users", currentUserID);
 const getYearField = () => `calendarData.${currentYear}`;
 
@@ -351,20 +345,17 @@ async function loadState() {
 
         let data = {};
         if (docSnap.exists() && docSnap.data().calendarData && docSnap.data().calendarData[currentYear]) {
-            // Pobieranie danych dla bieżącego roku
             data = docSnap.data().calendarData[currentYear];
         } else {
             console.log(`Brak danych dla roku ${currentYear}. Użycie domyślnych.`);
         }
 
-        // Używamy danych z Firestore lub domyślnych
         targetPercentage = parseFloat(data.targetPercentage) || 0.40;
         officeDays = data.officeDays || [];
         vacationDays = data.vacationDays || [];
         
     } catch (e) {
         console.error("Błąd ładowania danych z Firestore: ", e);
-        // W przypadku błędu awaryjnie ładujemy domyślne stany
         targetPercentage = 0.40;
         officeDays = [];
         vacationDays = [];
@@ -382,24 +373,21 @@ async function saveState() {
         vacationDays: vacationDays
     };
 
-    const updatePath = getYearField();
-
     try {
         await setDoc(getDocRef(), { 
             calendarData: {
                 [currentYear]: dataToSave
             }
-        }, { merge: true }); // Używamy merge, aby zaktualizować tylko dany rok
+        }, { merge: true });
 
         console.log("Dane zapisane pomyślnie w Firestore dla roku:", currentYear);
         updateYearlyStats();
     } catch (e) {
         console.error("Błąd zapisu danych do Firestore: ", e);
-        // Możesz tutaj dodać informację dla użytkownika o błędzie zapisu
     }
 }
 
-// --- POZOSTAŁA LOGIKA KALENDARZA (Minimalne zmiany) ---
+// --- LOGIKA KALENDARZA ---
 
 function getEasterDate(year) {
     const a = year % 19;
@@ -415,7 +403,7 @@ function getEasterDate(year) {
     const l = (32 + 2 * e + 2 * i - h - k) % 7;
     const m = Math.floor((a + 11 * h + 22 * l) / 451);
     const p = (h + l - 7 * m + 114);
-    const month = Math.floor(p / 31) - 1; 
+    const month = Math.floor(p / 31) - 1; 
     const day = (p % 31) + 1;
     return new Date(year, month, day);
 }
@@ -440,13 +428,13 @@ function calculateHolidays(year) {
 
     const easter = getEasterDate(year);
     const easterMonday = addDays(easter, 1);
-    const corpusChristi = addDays(easter, 60); 
-    const pentecost = addDays(easter, 49); 
+    const corpusChristi = addDays(easter, 60); 
+    const pentecost = addDays(easter, 49); 
 
-    h.push(formatDate(easter)); 
-    h.push(formatDate(easterMonday)); 
+    h.push(formatDate(easter)); 
+    h.push(formatDate(easterMonday)); 
     h.push(formatDate(corpusChristi));
-    h.push(formatDate(pentecost)); 
+    h.push(formatDate(pentecost)); 
 
     return h;
 }
@@ -478,8 +466,8 @@ async function changeYear(val) {
     document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
     document.getElementById('main-title').setAttribute('data-year', currentYear);
 
-    await loadState(); // Oczekujemy na załadowanie stanu nowego roku
-    initTargetSelector(); 
+    await loadState(); 
+    initTargetSelector(); 
     updateYearlyStats();
     renderCalendar();
 }
@@ -531,7 +519,7 @@ function toggleDay(dateStr, monthIndex) {
             vacationDays = vacationDays.filter(d => d !== dateStr);
         }
     }
-    saveState(); // ZAPIS DO FIRESTORE PO KAŻDEJ ZMIANIE
+    saveState(); 
     renderCalendar();
 }
 
@@ -539,7 +527,7 @@ function clearAll() {
     if(confirm(`Czy na pewno chcesz wyczyścić cały kalendarz dla roku ${currentYear}? Spowoduje to usunięcie danych z Twojego konta Firebase.`)) {
         officeDays = [];
         vacationDays = [];
-        saveState(); // ZAPIS PUSTYCH DANYCH
+        saveState(); 
         renderCalendar();
     }
 }
@@ -553,14 +541,14 @@ function getMonthData(monthIndex) {
     const date = new Date(currentYear, monthIndex, 1);
     const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
 
-    let startDay = date.getDay(); 
+    let startDay = date.getDay(); 
     let firstDayOffset = startDay === 0 ? 6 : startDay - 1;
 
     let days = [];
-    let baseWorkingDaysCount = 0; 
+    let baseWorkingDaysCount = 0; 
     let saturdayHolidayCount = 0;
-    let vacationCount = 0; 
-    let weekdayHolidayCount = 0; 
+    let vacationCount = 0; 
+    let weekdayHolidayCount = 0; 
 
     for (let i = 1; i <= daysInMonth; i++) {
         const currentDate = new Date(currentYear, monthIndex, i);
@@ -575,8 +563,8 @@ function getMonthData(monthIndex) {
         const _isOffice = officeDays.includes(dateStr);
         const _isVacation = vacationDays.includes(dateStr);
 
-        if (!_isWeekend) { 
-            baseWorkingDaysCount++; 
+        if (!_isWeekend) { 
+            baseWorkingDaysCount++; 
         }
 
         if (!_isWeekend && isRealHoliday) {
@@ -636,7 +624,7 @@ function updateYearlyStats() {
 
     for(let m=0; m<12; m++) {
         const data = getMonthData(m);
-        totalEffectiveWorking += data.effectiveWorkingDays; 
+        totalEffectiveWorking += data.effectiveWorkingDays; 
         totalRequired += data.requiredDays;
     }
 
@@ -788,19 +776,15 @@ function renderCalendar() {
     }
 }
 
-// Globalna funkcja inicjująca kalendarz po zalogowaniu
 async function initCalendarApp() {
     initYearSelector();
-    await loadState(); // Czekamy na pobranie danych z Firestore
+    await loadState(); 
     initTargetSelector();
     updateYearlyStats();
     renderCalendar();
 }
 
-
-// --- GŁÓWNA INICJALIZACJA: OBSŁUGA STANU AUTORYZACJI ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Pokaż ładowanie tylko, gdy sprawdzamy stan autoryzacji
     showLoading(); 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -811,6 +795,21 @@ document.addEventListener('DOMContentLoaded', () => {
         hideLoading();
     });
 });
+
+// --- WAŻNE: UDOSTĘPNIENIE FUNKCJI DLA HTML ---
+// Ponieważ używamy <script type="module">, funkcje domyślnie nie są widoczne w globalnym zakresie (window).
+// HTML "onclick" szuka funkcji w window. Musimy je przypisać ręcznie.
+
+window.handleAuth = handleAuth;
+window.toggleAuthMode = toggleAuthMode;
+window.signInWithGoogle = signInWithGoogle;
+window.signOutUser = signOutUser;
+window.changeYear = changeYear;
+window.changeTarget = changeTarget;
+window.clearAll = clearAll;
+window.setMode = setMode;
+window.toggleDay = toggleDay;
+
 </script>
 </body>
 </html>
