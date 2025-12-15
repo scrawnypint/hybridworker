@@ -8,49 +8,110 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .day-cell { transition: all 0.15s ease-out; }
-        .day-cell:hover:not(.disabled) { transform: scale(1.15); z-index: 10; cursor: pointer; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .day-cell {
+            transition: all 0.15s ease-out;
+        }
+
+        .day-cell:hover:not(.disabled) {
+            transform: scale(1.15);
+            z-index: 10;
+            cursor: pointer;
+        }
+
         .year-select {
-            background: transparent; border: none; color: inherit; font-weight: inherit;
-            font-size: inherit; cursor: pointer; border-bottom: 2px solid #bfdbfe;
-            padding: 0 0.2em; outline: none; appearance: none; -webkit-appearance: none; text-align: center;
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-weight: inherit;
+            font-size: inherit;
+            cursor: pointer;
+            border-bottom: 2px solid #bfdbfe;
+            padding: 0 0.2em;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            text-align: center;
         }
-        .year-select:hover { border-bottom-color: #60a5fa; }
-        .year-select:focus { background-color: #eff6ff; border-radius: 4px; }
-        #calendar-app { display: none; }
+
+        .year-select:hover {
+            border-bottom-color: #60a5fa;
+        }
+
+        .year-select:focus {
+            background-color: #eff6ff;
+            border-radius: 4px;
+        }
+
+        #calendar-app {
+            display: none;
+        }
+
         #loading-indicator {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            padding: 24px 32px; background: white; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1000; display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 24px 32px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
         }
-        #google-auth-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        #google-auth-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        #google-auth-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        #google-auth-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
         #cloud-status {
-            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
-            border-radius: 20px; font-size: 12px; font-weight: 500; transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
         }
-        #cloud-status.saving { background: #dbeafe; color: #1e40af; }
-        #cloud-status.saved { background: #dcfce7; color: #166534; }
-        #cloud-status.error { background: #fee2e2; color: #991b1b; }
-        #cloud-status.loading { background: #f3f4f6; color: #6b7280; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .cloud-saving { animation: pulse 1s infinite; }
-        .vacation-limit-input {
-            width: 60px; text-align: center; font-weight: bold; color: #d97706;
-            background: #fffbeb; border: none; border-bottom: 2px solid #fcd34d;
-            padding: 2px 4px; border-radius: 4px; outline: none; transition: all 0.2s;
+
+        #cloud-status.saving {
+            background: #dbeafe;
+            color: #1e40af;
         }
-        .vacation-limit-input:hover { border-bottom-color: #f59e0b; }
-        .vacation-limit-input:focus { background: #fef3c7; border-bottom-color: #d97706; }
-        .vacation-limit-input::-webkit-outer-spin-button,
-        .vacation-limit-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .vacation-limit-input[type=number] { -moz-appearance: textfield; }
-        .limit-warning { animation: shake 0.5s ease-in-out; }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+
+        #cloud-status.saved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        #cloud-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        #cloud-status.loading {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .cloud-saving {
+            animation: pulse 1s infinite;
         }
     </style>
 </head>
@@ -61,7 +122,9 @@
     <div class="text-center">
         <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+            </path>
         </svg>
         <p class="text-sm text-slate-600" id="loading-text">Ładowanie danych...</p>
     </div>
@@ -71,12 +134,16 @@
 <div id="auth-screen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl border border-slate-200">
     <h2 class="text-3xl font-bold text-blue-800 mb-2 text-center" id="auth-title">Zaloguj się</h2>
     <p class="text-slate-500 text-sm text-center mb-6">Twój kalendarz zostanie zapisany w chmurze</p>
+
     <div id="auth-error" class="text-red-600 mb-4 text-center hidden p-3 bg-red-50 rounded-lg border border-red-200"></div>
 
-    <input type="email" id="auth-email" placeholder="Adres E-mail" class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
-    <input type="password" id="auth-password" placeholder="Hasło" class="w-full p-3 mb-6 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
+    <input type="email" id="auth-email" placeholder="Adres E-mail"
+           class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
+    <input type="password" id="auth-password" placeholder="Hasło"
+           class="w-full p-3 mb-6 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
 
-    <button id="auth-main-btn" onclick="handleAuth()" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+    <button id="auth-main-btn" onclick="handleAuth()"
+            class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
         Zaloguj
     </button>
 
@@ -86,18 +153,24 @@
         <div class="w-full border-t border-slate-200"></div>
     </div>
 
-    <button id="google-auth-btn" onclick="signInWithGoogle()" class="w-full py-3 mt-4 flex items-center justify-center bg-white text-slate-700 font-semibold rounded-lg border border-slate-300 hover:bg-slate-50 transition shadow-sm">
+    <button id="google-auth-btn" onclick="signInWithGoogle()"
+            class="w-full py-3 mt-4 flex items-center justify-center bg-white text-slate-700 font-semibold rounded-lg border border-slate-300 hover:bg-slate-50 transition shadow-sm">
         <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.4l6.62-6.5C34.33 3.6 29.47 2 24 2 15.3 2 7.76 6.13 3.96 12.55l7.98 6.19C13.25 14.54 18.06 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.5 24c0-1.64-.15-3.22-.42-4.74H24v9.49h12.7c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C43.64 38.48 46.5 31.77 46.5 24z"/>
-            <path fill="#FBBC05" d="M11.94 28.34c-.63-1.87-.99-3.86-.99-5.91s.36-4.04.99-5.91L3.96 10.33C1.96 14.16 1 18.41 1 23c0 4.59.96 8.84 2.96 12.67l7.98-7.33z"/>
-            <path fill="#34A853" d="M24 47c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 40.53 14.54 47 24 47z"/>
+            <path fill="#EA4335"
+                  d="M24 9.5c3.54 0 6.71 1.22 9.21 3.4l6.62-6.5C34.33 3.6 29.47 2 24 2 15.3 2 7.76 6.13 3.96 12.55l7.98 6.19C13.25 14.54 18.06 9.5 24 9.5z"/>
+            <path fill="#4285F4"
+                  d="M46.5 24c0-1.64-.15-3.22-.42-4.74H24v9.49h12.7c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C43.64 38.48 46.5 31.77 46.5 24z"/>
+            <path fill="#FBBC05"
+                  d="M11.94 28.34c-.63-1.87-.99-3.86-.99-5.91s.36-4.04.99-5.91L3.96 10.33C1.96 14.16 1 18.41 1 23c0 4.59.96 8.84 2.96 12.67l7.98-7.33z"/>
+            <path fill="#34A853"
+                  d="M24 47c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 40.53 14.54 47 24 47z"/>
         </svg>
         <span id="google-btn-text">Zaloguj przez Google</span>
     </button>
 
     <p class="text-center mt-6 text-sm">
-        <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="text-blue-500 hover:text-blue-700 font-medium">
+        <button id="auth-toggle-btn" onclick="toggleAuthMode()"
+                class="text-blue-500 hover:text-blue-700 font-medium">
             Nie masz konta? Zarejestruj się!
         </button>
     </p>
@@ -107,7 +180,8 @@
 <div id="calendar-app" class="max-w-7xl mx-auto">
     <header class="mb-8 text-center">
         <div class="flex justify-center items-center gap-3 mb-2 flex-wrap">
-            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 flex items-center gap-2 flex-wrap justify-center" id="main-title">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 flex items-center gap-2 flex-wrap justify-center"
+                id="main-title">
                 Kalendarz Pracy Hybrydowej
                 <div class="relative inline-block">
                     <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
@@ -115,6 +189,8 @@
                 </div>
             </h1>
         </div>
+        text
+        text
 
         <!-- Status użytkownika i synchronizacji -->
         <div class="flex justify-center items-center gap-3 mb-4 flex-wrap">
@@ -124,26 +200,31 @@
                 <span id="cloud-text">Zapisano</span>
             </div>
         </div>
-        
-        <div class="text-slate-600 mb-4 flex justify-center items-center gap-4 flex-wrap">
-            <p class="flex items-center gap-2">
-                Cel: 
+
+        <p class="text-slate-600 mb-4 flex justify-center items-center gap-3 flex-wrap">
+            <span class="flex items-center gap-2">
+                Cel:
                 <span class="relative inline-block">
-                    <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
+                    <select id="target-selector" onchange="changeTarget(this.value)"
+                            class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
                     </select>
                     <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
                 </span>
                 dni w biurze.
-            </p>
-            <p class="flex items-center gap-2">
-                Limit urlopu: 
-                <input type="number" id="vacation-limit-input" min="0" max="366" value="26" 
-                       onchange="changeVacationLimit(this.value)" 
-                       oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                       class="vacation-limit-input">
-                <span>dni</span>
-            </p>
-        </div>
+            </span>
+
+            <span class="flex items-center gap-2">
+                Urlop:
+                <input id="vacation-limit-input"
+                       type="number"
+                       min="0"
+                       step="1"
+                       onchange="changeVacationLimit(this.value)"
+                       class="w-20 text-center font-bold text-amber-600 bg-amber-50 border-b-2 border-amber-200 hover:border-amber-400 focus:outline-none focus:bg-amber-100 rounded px-2 py-0.5 text-sm"
+                       placeholder="np. 26">
+                dni
+            </span>
+        </p>
 
         <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
             <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Biuro</div>
@@ -172,16 +253,8 @@
                 <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Nieobecności</div>
                 <div class="text-xl font-bold text-amber-600" id="year-absence-days">0</div>
                 <div class="text-xs text-slate-400 font-normal">
-                    <span id="vacation-count">0</span>/<span id="vacation-limit-display">26</span> urlop | <span id="sick-count">0</span> L4
+                    <span id="vacation-count">0</span> urlop / <span id="sick-count">0</span> L4
                 </div>
-            </div>
-        </div>
-
-        <!-- Ostrzeżenie o limicie urlopu -->
-        <div id="vacation-limit-warning" class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm hidden">
-            <div class="flex items-center justify-center gap-2 text-amber-700">
-                <span class="text-lg">⚠️</span>
-                <span><strong>Osiągnięto limit urlopu!</strong> Wykorzystano <span id="vacation-used">0</span> z <span id="vacation-max">26</span> dni.</span>
             </div>
         </div>
 
@@ -195,8 +268,7 @@
         </div>
     </header>
 
-    <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-    </div>
+    <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
 
     <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
         ☁️ Twoje dane są automatycznie zapisywane w chmurze Firebase.<br>
@@ -206,8 +278,23 @@
 
 <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+    import {
+        getAuth,
+        onAuthStateChanged,
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        signOut,
+        GoogleAuthProvider,
+        signInWithPopup,
+        signInWithRedirect,
+        getRedirectResult
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+    import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc
+    } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
     // --- KONFIGURACJA FIREBASE ---
     const firebaseConfig = {
@@ -234,12 +321,16 @@
     const nowYear = new Date().getFullYear();
     let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
     let targetPercentage = 0.40;
-    let vacationDaysLimit = 26;
+    let vacationLimit = null; // limit dni urlopu (null = brak limitu)
     let holidaysCache = [];
 
-    const MONTH_NAMES = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+    const MONTH_NAMES = [
+        "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
+        "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
+    ];
     const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
+    // Nazwy świąt
     const HOLIDAY_NAMES = {
         '01-01': 'Nowy Rok',
         '01-06': 'Trzech Króli',
@@ -260,6 +351,7 @@
     let vacationDays = [];
     let sickLeaveDays = [];
     let monthModes = new Array(12).fill(MODE_OFFICE);
+
     let isLoginMode = true;
     let currentUserID = null;
     let currentUserEmail = null;
@@ -283,9 +375,9 @@
     const cloudIcon = document.getElementById('cloud-icon');
     const cloudText = document.getElementById('cloud-text');
     const vacationLimitInput = document.getElementById('vacation-limit-input');
-    const vacationLimitWarning = document.getElementById('vacation-limit-warning');
 
     // --- FUNKCJE POMOCNICZE ---
+
     function showLoading(text = 'Ładowanie...') {
         loadingText.textContent = text;
         loadingIndicator.style.display = 'block';
@@ -298,7 +390,7 @@
     function updateCloudStatus(status) {
         cloudStatus.className = status;
         cloudIcon.className = '';
-        switch(status) {
+        switch (status) {
             case 'saving':
                 cloudIcon.textContent = '☁️';
                 cloudIcon.className = 'cloud-saving';
@@ -325,21 +417,8 @@
         googleAuthBtn.classList.toggle('opacity-70', isLoading);
     }
 
-    function showVacationLimitWarning() {
-        vacationLimitInput.classList.add('limit-warning');
-        setTimeout(() => vacationLimitInput.classList.remove('limit-warning'), 500);
-    }
-
-    function getTotalVacationDays() {
-        let total = 0;
-        for (let m = 0; m < 12; m++) {
-            const data = getMonthData(m);
-            total += data.vacationCount;
-        }
-        return total;
-    }
-
     // --- AUTORYZACJA ---
+
     function toggleAuthMode() {
         isLoginMode = !isLoginMode;
         authTitle.innerText = isLoginMode ? "Zaloguj się" : "Zarejestruj się";
@@ -371,7 +450,8 @@
         } catch (error) {
             console.error("Błąd autoryzacji:", error.code);
             let message = "Wystąpił błąd. Spróbuj ponownie.";
-            switch(error.code) {
+
+            switch (error.code) {
                 case 'auth/wrong-password':
                 case 'auth/user-not-found':
                 case 'auth/invalid-credential':
@@ -393,6 +473,7 @@
                     message = "Błąd sieci.";
                     break;
             }
+
             showAuthError(message);
         } finally {
             authMainBtn.disabled = false;
@@ -413,7 +494,7 @@
             let message = "Błąd logowania przez Google.";
             let shouldTryRedirect = false;
 
-            switch(error.code) {
+            switch (error.code) {
                 case 'auth/popup-closed-by-user':
                     message = "Okno zamknięte. Spróbuj ponownie.";
                     break;
@@ -437,6 +518,7 @@
                     message = "Odblokuj popupy i spróbuj ponownie.";
                 }
             }
+
             showAuthError(message);
         } finally {
             isGoogleSignInInProgress = false;
@@ -493,6 +575,7 @@
     }
 
     // --- FIREBASE FIRESTORE ---
+
     function getDocRef() {
         return doc(db, "users", currentUserID);
     }
@@ -510,10 +593,10 @@
                 if (userData.calendarData && userData.calendarData[currentYear]) {
                     const yearData = userData.calendarData[currentYear];
                     targetPercentage = parseFloat(yearData.targetPercentage) || 0.40;
-                    vacationDaysLimit = parseInt(yearData.vacationDaysLimit) || 26;
                     officeDays = yearData.officeDays || [];
                     vacationDays = yearData.vacationDays || [];
                     sickLeaveDays = yearData.sickLeaveDays || [];
+                    vacationLimit = (typeof yearData.vacationLimit === 'number') ? yearData.vacationLimit : null;
                     console.log(`✅ Załadowano dane dla roku ${currentYear}`);
                 } else {
                     console.log(`ℹ️ Brak danych dla roku ${currentYear}`);
@@ -524,6 +607,7 @@
                 resetToDefaults();
                 await saveState();
             }
+
             updateCloudStatus('saved');
         } catch (e) {
             console.error("❌ Błąd ładowania:", e);
@@ -538,10 +622,10 @@
 
     function resetToDefaults() {
         targetPercentage = 0.40;
-        vacationDaysLimit = 26;
         officeDays = [];
         vacationDays = [];
         sickLeaveDays = [];
+        vacationLimit = null;
     }
 
     async function saveState() {
@@ -557,21 +641,25 @@
 
             const dataToSave = {
                 targetPercentage: targetPercentage,
-                vacationDaysLimit: vacationDaysLimit,
                 officeDays: [...officeDays],
                 vacationDays: [...vacationDays],
                 sickLeaveDays: [...sickLeaveDays],
+                vacationLimit: vacationLimit,
                 lastUpdated: new Date().toISOString()
             };
 
             try {
-                await setDoc(getDocRef(), {
-                    email: currentUserEmail,
-                    lastLogin: new Date().toISOString(),
-                    calendarData: {
-                        [currentYear]: dataToSave
-                    }
-                }, { merge: true });
+                await setDoc(
+                    getDocRef(),
+                    {
+                        email: currentUserEmail,
+                        lastLogin: new Date().toISOString(),
+                        calendarData: {
+                            [currentYear]: dataToSave
+                        }
+                    },
+                    { merge: true }
+                );
 
                 console.log(`✅ Zapisano w Firebase dla roku ${currentYear}`);
                 updateCloudStatus('saved');
@@ -585,6 +673,7 @@
     }
 
     // --- LOGIKA KALENDARZA ---
+
     function getEasterDate(year) {
         const a = year % 19;
         const b = Math.floor(year / 100);
@@ -612,29 +701,24 @@
 
     function calculateHolidays(year) {
         const h = [
-            `${year}-01-01`, `${year}-01-06`, `${year}-05-01`, `${year}-05-03`,
-            `${year}-08-15`, `${year}-11-01`, `${year}-11-11`, `${year}-12-25`, `${year}-12-26`
+            `${year}-01-01`,
+            `${year}-01-06`,
+            `${year}-05-01`,
+            `${year}-05-03`,
+            `${year}-08-15`,
+            `${year}-11-01`,
+            `${year}-11-11`,
+            `${year}-12-25`,
+            `${year}-12-26`
         ];
+
         const easter = getEasterDate(year);
-        h.push(formatDate(easter));
-        h.push(formatDate(addDays(easter, 1)));
-        h.push(formatDate(addDays(easter, 49)));
-        h.push(formatDate(addDays(easter, 60)));
+        h.push(formatDate(easter));              // Wielkanoc
+        h.push(formatDate(addDays(easter, 1)));  // Poniedziałek Wielkanocny
+        h.push(formatDate(addDays(easter, 49))); // Zesłanie Ducha Świętego
+        h.push(formatDate(addDays(easter, 60))); // Boże Ciało
+
         return h;
-    }
-
-    function getMovingHolidayName(dateStr, year) {
-        const easter = getEasterDate(year);
-        const easterStr = formatDate(easter);
-        const easterMondayStr = formatDate(addDays(easter, 1));
-        const pentecostStr = formatDate(addDays(easter, 49));
-        const corpusChristiStr = formatDate(addDays(easter, 60));
-
-        if (dateStr === easterStr) return 'Wielkanoc';
-        if (dateStr === easterMondayStr) return 'Poniedziałek Wielkanocny';
-        if (dateStr === pentecostStr) return 'Zesłanie Ducha Świętego';
-        if (dateStr === corpusChristiStr) return 'Boże Ciało';
-        return 'Święto';
     }
 
     function formatDate(date) {
@@ -652,6 +736,7 @@
     function initYearSelector() {
         const selector = document.getElementById('year-selector');
         selector.innerHTML = '';
+
         for (let y = MIN_YEAR; y <= MAX_YEAR; y++) {
             const option = document.createElement('option');
             option.value = y;
@@ -659,6 +744,7 @@
             if (y === currentYear) option.selected = true;
             selector.appendChild(option);
         }
+
         document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
     }
 
@@ -667,7 +753,7 @@
         document.querySelectorAll('.current-year-display').forEach(el => el.innerText = currentYear);
         await loadState();
         initTargetSelector();
-        updateVacationLimitInput();
+        initVacationLimitInput();
         updateYearlyStats();
         renderCalendar();
     }
@@ -675,6 +761,7 @@
     function initTargetSelector() {
         const selector = document.getElementById('target-selector');
         selector.innerHTML = '';
+
         for (let i = 0; i <= 100; i += 5) {
             const option = document.createElement('option');
             option.value = (i / 100).toFixed(2);
@@ -686,8 +773,13 @@
         }
     }
 
-    function updateVacationLimitInput() {
-        vacationLimitInput.value = vacationDaysLimit;
+    function initVacationLimitInput() {
+        if (!vacationLimitInput) return;
+        if (vacationLimit === null || typeof vacationLimit !== 'number' || isNaN(vacationLimit)) {
+            vacationLimitInput.value = '';
+        } else {
+            vacationLimitInput.value = vacationLimit;
+        }
     }
 
     function changeTarget(val) {
@@ -698,19 +790,14 @@
     }
 
     function changeVacationLimit(val) {
-        const newLimit = parseInt(val) || 0;
-        if (newLimit < 0) {
-            vacationLimitInput.value = 0;
-            vacationDaysLimit = 0;
-        } else if (newLimit > 366) {
-            vacationLimitInput.value = 366;
-            vacationDaysLimit = 366;
+        if (val === '' || val === null) {
+            vacationLimit = null; // brak limitu
         } else {
-            vacationDaysLimit = newLimit;
+            let n = parseInt(val, 10);
+            if (isNaN(n) || n < 0) n = 0;
+            vacationLimit = n;
         }
         saveState();
-        updateYearlyStats();
-        renderCalendar();
     }
 
     function setMode(monthIndex, mode) {
@@ -722,6 +809,7 @@
         const currentMode = monthModes[monthIndex];
         const date = new Date(dateStr);
 
+        // Nie pozwalaj zmieniać weekendów oraz "prawdziwych" świąt (z wyjątkiem Wigilii)
         if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
 
         const removeFromAll = () => {
@@ -741,10 +829,9 @@
             if (vacationDays.includes(dateStr)) {
                 vacationDays = vacationDays.filter(d => d !== dateStr);
             } else {
-                // Sprawdź limit urlopu przed dodaniem
-                const currentVacationCount = getTotalVacationDays();
-                if (currentVacationCount >= vacationDaysLimit) {
-                    showVacationLimitWarning();
+                // Sprawdź limit urlopu
+                if (vacationLimit !== null && vacationLimit >= 0 && vacationDays.length >= vacationLimit) {
+                    alert('Osiągnięto ustawiony limit dni urlopu.');
                     return;
                 }
                 removeFromAll();
@@ -765,7 +852,7 @@
     }
 
     function clearAll() {
-        if(confirm(`Wyczyścić wszystkie zaznaczenia dla roku ${currentYear}?\n\nTa operacja usunie wszystkie dni biurowe, urlopy i L4.`)) {
+        if (confirm(`Wyczyścić wszystkie zaznaczenia dla roku ${currentYear}?\n\nTa operacja usunie wszystkie dni biurowe, urlopy i L4.`)) {
             officeDays = [];
             vacationDays = [];
             sickLeaveDays = [];
@@ -782,6 +869,8 @@
 
         let days = [];
         let baseWorkingDaysCount = 0;
+        let saturdayHolidayCount = 0;
+        let saturdayHolidayNames = [];
         let vacationCount = 0;
         let sickLeaveCount = 0;
         let weekdayHolidayCount = 0;
@@ -790,24 +879,43 @@
             const currentDate = new Date(currentYear, monthIndex, i);
             const dateStr = formatDate(currentDate);
             const _isWeekend = isWeekend(currentDate);
+            const dayOfWeek = currentDate.getDay();
+
             const isWigilia = (dateStr === `${currentYear}-12-24`);
             const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
             const isVisualHoliday = holidaysCache.includes(dateStr) || isWigilia;
+
             const _isOffice = officeDays.includes(dateStr);
             const _isVacation = vacationDays.includes(dateStr);
             const _isSickLeave = sickLeaveDays.includes(dateStr);
 
             if (!_isWeekend) baseWorkingDaysCount++;
             if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
+
+            // Zliczaj święta w sobotę (dla informacji, nie dla obliczeń)
+            if (isRealHoliday && dayOfWeek === 6) {
+                saturdayHolidayCount++;
+                const monthDay = dateStr.slice(5);
+                const name = HOLIDAY_NAMES[monthDay] || 'Święto';
+                saturdayHolidayNames.push(name);
+            }
+
             if (!_isWeekend && !isRealHoliday && _isVacation) vacationCount++;
             if (!_isWeekend && !isRealHoliday && _isSickLeave) sickLeaveCount++;
 
             days.push({
-                day: i, dateStr, isWeekend: _isWeekend, isHoliday: isVisualHoliday,
-                isWigilia, isOffice: _isOffice, isVacation: _isVacation, isSickLeave: _isSickLeave
+                day: i,
+                dateStr,
+                isWeekend: _isWeekend,
+                isHoliday: isVisualHoliday,
+                isWigilia,
+                isOffice: _isOffice,
+                isVacation: _isVacation,
+                isSickLeave: _isSickLeave
             });
         }
 
+        // Nie odejmujemy saturdayHolidayCount - święto w sobotę nie zmniejsza dni roboczych
         let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
         if (daysToWorkBase < 0) daysToWorkBase = 0;
 
@@ -816,7 +924,17 @@
 
         const requiredDays = Math.ceil(effectiveWorkingDays * targetPercentage);
 
-        return { name: MONTH_NAMES[monthIndex], days, firstDayOffset, effectiveWorkingDays, vacationCount, sickLeaveCount, requiredDays };
+        return {
+            name: MONTH_NAMES[monthIndex],
+            days,
+            firstDayOffset,
+            effectiveWorkingDays,
+            vacationCount,
+            sickLeaveCount,
+            requiredDays,
+            saturdayHolidayCount,
+            saturdayHolidayNames
+        };
     }
 
     function updateYearlyStats() {
@@ -839,23 +957,7 @@
         document.getElementById('year-required-days').innerText = totalRequired;
         document.getElementById('year-absence-days').innerText = totalVacation + totalSick;
         document.getElementById('vacation-count').innerText = totalVacation;
-        document.getElementById('vacation-limit-display').innerText = vacationDaysLimit;
         document.getElementById('sick-count').innerText = totalSick;
-
-        // Aktualizuj ostrzeżenie o limicie urlopu
-        const vacationUsed = document.getElementById('vacation-used');
-        const vacationMax = document.getElementById('vacation-max');
-        
-        if (vacationUsed && vacationMax) {
-            vacationUsed.textContent = totalVacation;
-            vacationMax.textContent = vacationDaysLimit;
-        }
-
-        if (totalVacation >= vacationDaysLimit && vacationDaysLimit > 0) {
-            vacationLimitWarning.classList.remove('hidden');
-        } else {
-            vacationLimitWarning.classList.add('hidden');
-        }
 
         const selectedEl = document.getElementById('year-selected-days');
         selectedEl.innerText = officeDays.length;
@@ -885,12 +987,31 @@
             monthCard.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col";
 
             const btnBase = "py-1.5 px-2 rounded text-xs font-semibold transition-all border flex items-center justify-center gap-1 cursor-pointer select-none flex-1";
-            const officeBtnClass = currentMode === MODE_OFFICE ? "bg-green-600 text-white border-green-700 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-green-50 hover:text-green-600";
-            const vacationBtnClass = currentMode === MODE_VACATION ? "bg-amber-500 text-white border-amber-600 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-amber-50 hover:text-amber-600";
-            const sickBtnClass = currentMode === MODE_SICK ? "bg-rose-500 text-white border-rose-600 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-rose-50 hover:text-rose-600";
+            const officeBtnClass = currentMode === MODE_OFFICE
+                ? "bg-green-600 text-white border-green-700 shadow-sm"
+                : "bg-white text-slate-500 border-slate-200 hover:bg-green-50 hover:text-green-600";
+            const vacationBtnClass = currentMode === MODE_VACATION
+                ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                : "bg-white text-slate-500 border-slate-200 hover:bg-amber-50 hover:text-amber-600";
+            const sickBtnClass = currentMode === MODE_SICK
+                ? "bg-rose-500 text-white border-rose-600 shadow-sm"
+                : "bg-white text-slate-500 border-slate-200 hover:bg-rose-50 hover:text-rose-600";
 
             let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
-            let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
+            let statusIcon = isMet
+                ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                : '';
+
+            // Notka o święcie w sobotę - informacja o dodatkowym dniu wolnym
+            let noteHtml = '';
+            if (data.saturdayHolidayCount > 0) {
+                const holidayNames = data.saturdayHolidayNames.join(', ');
+                noteHtml = `
+                    <div class="mx-4 mt-2 px-3 py-2 bg-purple-50 border border-purple-100 rounded-md text-xs text-purple-800">
+                        🎁 <strong>${data.saturdayHolidayCount} dodatkowy dzień wolny</strong> do wykorzystania (${holidayNames} wypada w sobotę)
+                    </div>
+                `;
+            }
 
             let absenceSummary = '';
             if (data.vacationCount > 0 || data.sickLeaveCount > 0) {
@@ -918,6 +1039,7 @@
                 <div class="w-full h-1.5 bg-slate-100">
                     <div class="h-1.5 ${progressColor} transition-all duration-500" style="width: ${progressPercent}%"></div>
                 </div>
+                ${noteHtml}
                 <div class="p-4 flex-grow pt-2">
                     <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
                         <span>Pracujące: ${data.effectiveWorkingDays} ${absenceSummary}</span>
@@ -941,13 +1063,14 @@
                 if (day.isHoliday) {
                     classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
                     const monthDay = day.dateStr.slice(5);
-                    title = day.isWigilia ? 'Wigilia' : (HOLIDAY_NAMES[monthDay] || getMovingHolidayName(day.dateStr, currentYear));
+                    title = day.isWigilia ? 'Wigilia' : (HOLIDAY_NAMES[monthDay] || 'Święto');
                     html += `<div class="${classes}" title="${title}">${day.day}<span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span></div>`;
                 } else if (day.isWeekend) {
                     classes += "bg-slate-100 text-slate-400 disabled cursor-default";
                     html += `<div class="${classes}">${day.day}</div>`;
                 } else {
                     onclick = `onclick="toggleDay('${day.dateStr}', ${m})"`;
+
                     if (day.isOffice) {
                         classes += "bg-green-500 text-white shadow-md shadow-green-200 border border-green-600";
                         title = "Dzień w biurze";
@@ -968,6 +1091,7 @@
                         }
                         title = "Praca zdalna (kliknij aby zmienić)";
                     }
+
                     html += `<div class="${classes}" ${onclick} title="${title}">${day.day}</div>`;
                 }
             });
@@ -982,12 +1106,13 @@
         initYearSelector();
         await loadState();
         initTargetSelector();
-        updateVacationLimitInput();
+        initVacationLimitInput();
         updateYearlyStats();
         renderCalendar();
     }
 
     // --- INICJALIZACJA ---
+
     document.addEventListener('DOMContentLoaded', async () => {
         showLoading('Inicjalizacja...');
         await handleRedirectResult();
