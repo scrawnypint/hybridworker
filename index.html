@@ -64,12 +64,14 @@
             display: none;
         }
 
-        #google-auth-btn:disabled {
+        #google-auth-btn:disabled,
+        #microsoft-auth-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
         }
 
-        #google-auth-btn:not(:disabled):hover {
+        #google-auth-btn:not(:disabled):hover,
+        #microsoft-auth-btn:not(:disabled):hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
@@ -168,6 +170,17 @@
         <span id="google-btn-text">Zaloguj przez Google</span>
     </button>
 
+    <button id="microsoft-auth-btn" onclick="signInWithMicrosoft()"
+            class="w-full py-3 mt-3 flex items-center justify-center bg-white text-slate-700 font-semibold rounded-lg border border-slate-300 hover:bg-slate-50 transition shadow-sm">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="10" height="10" fill="#F25022"></rect>
+            <rect x="13" y="1" width="10" height="10" fill="#7FBA00"></rect>
+            <rect x="1" y="13" width="10" height="10" fill="#00A4EF"></rect>
+            <rect x="13" y="13" width="10" height="10" fill="#FFB900"></rect>
+        </svg>
+        <span id="microsoft-btn-text">Zaloguj przez Microsoft</span>
+    </button>
+
     <p class="text-center mt-6 text-sm">
         <button id="auth-toggle-btn" onclick="toggleAuthMode()"
                 class="text-blue-500 hover:text-blue-700 font-medium">
@@ -189,6 +202,8 @@
                 </div>
             </h1>
         </div>
+        text
+        text
 
         <!-- Status użytkownika i synchronizacji -->
         <div class="flex justify-center items-center gap-3 mb-4 flex-wrap">
@@ -283,6 +298,7 @@
         createUserWithEmailAndPassword,
         signOut,
         GoogleAuthProvider,
+        OAuthProvider,
         signInWithPopup,
         signInWithRedirect,
         getRedirectResult
@@ -308,10 +324,17 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
     const googleProvider = new GoogleAuthProvider();
     googleProvider.addScope('email');
     googleProvider.addScope('profile');
     googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+    // Provider Microsoft (Azure AD / Microsoft 365)
+    const microsoftProvider = new OAuthProvider('microsoft.com');
+    microsoftProvider.setCustomParameters({ prompt: 'select_account' });
+    // Podstawowy scope z Graph API – pozwala odczytać podstawowe dane użytkownika
+    microsoftProvider.addScope('User.Read');
 
     // --- STAŁE I ZMIENNE ---
     const MIN_YEAR = 2025;
@@ -328,7 +351,6 @@
     ];
     const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
-    // Nazwy świąt
     const HOLIDAY_NAMES = {
         '01-01': 'Nowy Rok',
         '01-06': 'Trzech Króli',
@@ -354,6 +376,7 @@
     let currentUserID = null;
     let currentUserEmail = null;
     let isGoogleSignInInProgress = false;
+    let isMicrosoftSignInInProgress = false;
     let saveTimeout = null;
     let isSaving = false;
 
@@ -366,6 +389,8 @@
     const authError = document.getElementById('auth-error');
     const googleAuthBtn = document.getElementById('google-auth-btn');
     const googleBtnText = document.getElementById('google-btn-text');
+    const microsoftAuthBtn = document.getElementById('microsoft-auth-btn');
+    const microsoftBtnText = document.getElementById('microsoft-btn-text');
     const loadingIndicator = document.getElementById('loading-indicator');
     const loadingText = document.getElementById('loading-text');
     const userEmailDisplay = document.getElementById('user-email-display');
@@ -375,7 +400,6 @@
     const vacationLimitInput = document.getElementById('vacation-limit-input');
 
     // --- FUNKCJE POMOCNICZE ---
-
     function showLoading(text = 'Ładowanie...') {
         loadingText.textContent = text;
         loadingIndicator.style.display = 'block';
@@ -396,7 +420,7 @@
                 break;
             case 'saved':
                 cloudIcon.textContent = '✅';
-                cloudText.textContent = 'Zapisano';
+                cloudText.textContent = 'Zapisano w chmurze';
                 break;
             case 'error':
                 cloudIcon.textContent = '❌';
@@ -413,6 +437,13 @@
         googleAuthBtn.disabled = isLoading;
         googleBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Google';
         googleAuthBtn.classList.toggle('opacity-70', isLoading);
+    }
+
+    function setMicrosoftButtonLoading(isLoading) {
+        if (!microsoftAuthBtn) return;
+        microsoftAuthBtn.disabled = isLoading;
+        microsoftBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Microsoft';
+        microsoftAuthBtn.classList.toggle('opacity-70', isLoading);
     }
 
     // --- AUTORYZACJA ---
@@ -525,6 +556,55 @@
         }
     }
 
+    async function signInWithMicrosoft() {
+        if (isMicrosoftSignInInProgress) return;
+        isMicrosoftSignInInProgress = true;
+        authError.classList.add('hidden');
+        setMicrosoftButtonLoading(true);
+
+        try {
+            await signInWithPopup(auth, microsoftProvider);
+        } catch (error) {
+            console.error("Błąd Microsoft Auth:", error.code);
+            let message = "Błąd logowania przez Microsoft.";
+            let shouldTryRedirect = false;
+
+            switch (error.code) {
+                case 'auth/popup-closed-by-user':
+                    message = "Okno zamknięte. Spróbuj ponownie.";
+                    break;
+                case 'auth/popup-blocked':
+                    shouldTryRedirect = true;
+                    break;
+                case 'auth/operation-not-allowed':
+                    message = "Logowanie Microsoft nie jest włączone w Firebase.";
+                    break;
+                case 'auth/network-request-failed':
+                    message = "Błąd sieci.";
+                    break;
+                case 'auth/account-exists-with-different-credential':
+                    message = "Konto z tym adresem e-mail istnieje już z inną metodą logowania.";
+                    break;
+            }
+
+            if (shouldTryRedirect) {
+                try {
+                    showLoading('Przekierowanie...');
+                    await signInWithRedirect(auth, microsoftProvider);
+                    return;
+                } catch (e) {
+                    message = "Odblokuj popupy i spróbuj ponownie.";
+                }
+            }
+
+            showAuthError(message);
+        } finally {
+            isMicrosoftSignInInProgress = false;
+            setMicrosoftButtonLoading(false);
+            hideLoading();
+        }
+    }
+
     async function handleRedirectResult() {
         try {
             const result = await getRedirectResult(auth);
@@ -573,7 +653,6 @@
     }
 
     // --- FIREBASE FIRESTORE ---
-
     function getDocRef() {
         return doc(db, "users", currentUserID);
     }
@@ -671,7 +750,6 @@
     }
 
     // --- LOGIKA KALENDARZA ---
-
     function getEasterDate(year) {
         const a = year % 19;
         const b = Math.floor(year / 100);
@@ -711,10 +789,10 @@
         ];
 
         const easter = getEasterDate(year);
-        h.push(formatDate(easter));              // Wielkanoc
-        h.push(formatDate(addDays(easter, 1)));  // Poniedziałek Wielkanocny
-        h.push(formatDate(addDays(easter, 49))); // Zesłanie Ducha Świętego
-        h.push(formatDate(addDays(easter, 60))); // Boże Ciało
+        h.push(formatDate(easter));
+        h.push(formatDate(addDays(easter, 1)));
+        h.push(formatDate(addDays(easter, 49)));
+        h.push(formatDate(addDays(easter, 60)));
 
         return h;
     }
@@ -789,7 +867,7 @@
 
     function changeVacationLimit(val) {
         if (val === '' || val === null) {
-            vacationLimit = null; // brak limitu
+            vacationLimit = null;
         } else {
             let n = parseInt(val, 10);
             if (isNaN(n) || n < 0) n = 0;
@@ -807,7 +885,6 @@
         const currentMode = monthModes[monthIndex];
         const date = new Date(dateStr);
 
-        // Nie pozwalaj zmieniać weekendów oraz "prawdziwych" świąt (z wyjątkiem Wigilii)
         if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
 
         const removeFromAll = () => {
@@ -827,7 +904,6 @@
             if (vacationDays.includes(dateStr)) {
                 vacationDays = vacationDays.filter(d => d !== dateStr);
             } else {
-                // Sprawdź limit urlopu
                 if (vacationLimit !== null && vacationLimit >= 0 && vacationDays.length >= vacationLimit) {
                     alert('Osiągnięto ustawiony limit dni urlopu.');
                     return;
@@ -890,7 +966,6 @@
             if (!_isWeekend) baseWorkingDaysCount++;
             if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
 
-            // Zliczaj święta w sobotę (dla informacji, nie dla obliczeń)
             if (isRealHoliday && dayOfWeek === 6) {
                 saturdayHolidayCount++;
                 const monthDay = dateStr.slice(5);
@@ -913,7 +988,6 @@
             });
         }
 
-        // Nie odejmujemy saturdayHolidayCount - święto w sobotę nie zmniejsza dni roboczych
         let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
         if (daysToWorkBase < 0) daysToWorkBase = 0;
 
@@ -1000,7 +1074,6 @@
                 ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
                 : '';
 
-            // Notka o święcie w sobotę - informacja o dodatkowym dniu wolnym
             let noteHtml = '';
             if (data.saturdayHolidayCount > 0) {
                 const holidayNames = data.saturdayHolidayNames.join(', ');
@@ -1014,7 +1087,7 @@
             let absenceSummary = '';
             if (data.vacationCount > 0 || data.sickLeaveCount > 0) {
                 const parts = [];
-                if (data.vacationCount > 0) parts.push(`${data.vacationCount}U`);
+                if (data.vacationCount > 0) parts.push(`${data.vacationCount}u`);
                 if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount}L4`);
                 absenceSummary = `<span class="text-amber-600">(${parts.join('/')})</span>`;
             }
@@ -1110,7 +1183,6 @@
     }
 
     // --- INICJALIZACJA ---
-
     document.addEventListener('DOMContentLoaded', async () => {
         showLoading('Inicjalizacja...');
         await handleRedirectResult();
@@ -1131,6 +1203,7 @@
     window.handleAuth = handleAuth;
     window.toggleAuthMode = toggleAuthMode;
     window.signInWithGoogle = signInWithGoogle;
+    window.signInWithMicrosoft = signInWithMicrosoft;
     window.signOutUser = signOutUser;
     window.changeYear = changeYear;
     window.changeTarget = changeTarget;
