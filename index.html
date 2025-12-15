@@ -89,6 +89,30 @@ body { font-family: 'Inter', sans-serif; }
 .cloud-saving {
     animation: pulse 1s infinite;
 }
+
+/* Styl dla inputa dni urlopowych */
+.vacation-input {
+    width: 50px;
+    text-align: center;
+    font-weight: bold;
+    border: none;
+    border-bottom: 2px solid #fcd34d;
+    background: #fffbeb;
+    color: #b45309;
+    padding: 2px 4px;
+    border-radius: 4px;
+    outline: none;
+    -moz-appearance: textfield;
+}
+.vacation-input::-webkit-outer-spin-button,
+.vacation-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.vacation-input:focus {
+    border-bottom-color: #f59e0b;
+    background: #fef3c7;
+}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
@@ -163,15 +187,24 @@ body { font-family: 'Inter', sans-serif; }
             </div>
         </div>
         
-        <p class="text-slate-600 mb-4 flex justify-center items-center gap-2">
-            Cel: 
-            <span class="relative inline-block">
-                <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
-                </select>
-                <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
-            </span>
-            dni w biurze.
-        </p>
+        <!-- Ustawienia: Cel biurowy i Limit urlopu -->
+        <div class="flex flex-wrap justify-center items-center gap-4 text-slate-600 mb-4">
+            <div class="flex items-center gap-2">
+                <span>🏢 Cel biura:</span>
+                <span class="relative inline-block">
+                    <select id="target-selector" onchange="changeTarget(this.value)" class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
+                    </select>
+                    <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span>🏖️ Limit urlopu:</span>
+                <input type="number" id="vacation-limit-input" min="0" max="365" value="26" 
+                       onchange="changeVacationLimit(this.value)"
+                       class="vacation-input">
+                <span class="text-sm text-slate-500">dni</span>
+            </div>
+        </div>
 
         <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
             <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Biuro</div>
@@ -197,20 +230,17 @@ body { font-family: 'Inter', sans-serif; }
                 <div class="text-xl font-bold text-green-600" id="year-selected-days">0</div>
             </div>
             <div>
-                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Nieobecności</div>
-                <div class="text-xl font-bold text-amber-600" id="year-absence-days">0</div>
-                <div class="text-xs text-slate-400 font-normal">
-                    <span id="vacation-count">0</span> urlop / <span id="sick-count">0</span> L4
+                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Urlop</div>
+                <div class="text-xl font-bold" id="year-vacation-days">0</div>
+                <div class="text-xs text-slate-400 font-normal" id="vacation-remaining-info">
+                    pozostało: <span id="vacation-remaining">26</span> dni
                 </div>
             </div>
         </div>
 
-        <!-- Informacja o dodatkowych dniach wolnych za święta w sobotę -->
-        <div id="saturday-holidays-info" class="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-100 text-sm hidden">
-            <div class="flex items-center justify-center gap-2 text-purple-700">
-                <span class="text-lg">🎁</span>
-                <span><strong id="saturday-holidays-count">0</strong> dodatkowy dzień wolny w roku <span class="current-year-display"></span> (święto wypadające w sobotę)</span>
-            </div>
+        <!-- Informacja o L4 -->
+        <div id="sick-leave-info" class="mt-2 text-sm text-rose-600 hidden">
+            🏥 Dni na zwolnieniu lekarskim: <strong id="sick-count-display">0</strong>
         </div>
 
         <div class="mt-4 text-sm text-slate-400 text-center flex flex-wrap justify-center gap-4">
@@ -280,6 +310,7 @@ const nowYear = new Date().getFullYear();
 let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
 
 let targetPercentage = 0.40;
+let vacationLimit = 26; // Domyślny limit dni urlopowych
 let holidaysCache = [];
 
 const MONTH_NAMES = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
@@ -330,8 +361,9 @@ const userEmailDisplay = document.getElementById('user-email-display');
 const cloudStatus = document.getElementById('cloud-status');
 const cloudIcon = document.getElementById('cloud-icon');
 const cloudText = document.getElementById('cloud-text');
-const saturdayHolidaysInfo = document.getElementById('saturday-holidays-info');
-const saturdayHolidaysCount = document.getElementById('saturday-holidays-count');
+const vacationLimitInput = document.getElementById('vacation-limit-input');
+const sickLeaveInfo = document.getElementById('sick-leave-info');
+const sickCountDisplay = document.getElementById('sick-count-display');
 
 // --- FUNKCJE POMOCNICZE ---
 function showLoading(text = 'Ładowanie...') { 
@@ -372,6 +404,15 @@ function setGoogleButtonLoading(isLoading) {
     googleAuthBtn.disabled = isLoading;
     googleBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Google';
     googleAuthBtn.classList.toggle('opacity-70', isLoading);
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const bgColor = type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-slate-700';
+    toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // --- AUTORYZACJA ---
@@ -555,6 +596,7 @@ async function loadState() {
                 const yearData = userData.calendarData[currentYear];
                 
                 targetPercentage = parseFloat(yearData.targetPercentage) || 0.40;
+                vacationLimit = parseInt(yearData.vacationLimit) || 26;
                 officeDays = yearData.officeDays || [];
                 vacationDays = yearData.vacationDays || [];
                 sickLeaveDays = yearData.sickLeaveDays || [];
@@ -569,6 +611,9 @@ async function loadState() {
             resetToDefaults();
             await saveState();
         }
+        
+        // Aktualizuj input limitu urlopu
+        vacationLimitInput.value = vacationLimit;
         
         updateCloudStatus('saved');
         
@@ -585,6 +630,7 @@ async function loadState() {
 
 function resetToDefaults() {
     targetPercentage = 0.40;
+    vacationLimit = 26;
     officeDays = [];
     vacationDays = [];
     sickLeaveDays = [];
@@ -603,6 +649,7 @@ async function saveState() {
         
         const dataToSave = {
             targetPercentage: targetPercentage,
+            vacationLimit: vacationLimit,
             officeDays: [...officeDays],
             vacationDays: [...vacationDays],
             sickLeaveDays: [...sickLeaveDays],
@@ -671,27 +718,6 @@ function calculateHolidays(year) {
     return h;
 }
 
-// Funkcja zwracająca święta wypadające w sobotę
-function getSaturdayHolidays(year) {
-    const saturdayHolidays = [];
-    const holidays = calculateHolidays(year);
-    
-    holidays.forEach(dateStr => {
-        const date = new Date(dateStr);
-        if (date.getDay() === 6) { // Sobota
-            const monthDay = dateStr.slice(5); // "MM-DD"
-            const holidayName = HOLIDAY_NAMES[monthDay] || getMovingHolidayName(dateStr, year);
-            saturdayHolidays.push({
-                date: dateStr,
-                name: holidayName,
-                formattedDate: formatPolishDate(date)
-            });
-        }
-    });
-    
-    return saturdayHolidays;
-}
-
 function getMovingHolidayName(dateStr, year) {
     const easter = getEasterDate(year);
     const easterStr = formatDate(easter);
@@ -704,13 +730,6 @@ function getMovingHolidayName(dateStr, year) {
     if (dateStr === pentecostStr) return 'Zesłanie Ducha Świętego';
     if (dateStr === corpusChristiStr) return 'Boże Ciało';
     return 'Święto';
-}
-
-function formatPolishDate(date) {
-    const day = date.getDate();
-    const monthNames = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
-                        'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
-    return `${day} ${monthNames[date.getMonth()]}`;
 }
 
 function formatDate(date) {
@@ -768,6 +787,30 @@ function changeTarget(val) {
     renderCalendar();
 }
 
+function changeVacationLimit(val) {
+    const newLimit = parseInt(val) || 0;
+    
+    // Walidacja
+    if (newLimit < 0) {
+        vacationLimitInput.value = 0;
+        vacationLimit = 0;
+    } else if (newLimit > 365) {
+        vacationLimitInput.value = 365;
+        vacationLimit = 365;
+    } else {
+        vacationLimit = newLimit;
+    }
+    
+    // Sprawdź czy obecna liczba urlopów nie przekracza nowego limitu
+    if (vacationDays.length > vacationLimit) {
+        showToast(`Uwaga: Masz zaznaczone ${vacationDays.length} dni urlopu, a limit to ${vacationLimit}`, 'warning');
+    }
+    
+    saveState();
+    updateYearlyStats();
+    renderCalendar();
+}
+
 function setMode(monthIndex, mode) {
     monthModes[monthIndex] = mode;
     renderCalendar();
@@ -794,8 +837,14 @@ function toggleDay(dateStr, monthIndex) {
         }
     } else if (currentMode === MODE_VACATION) {
         if (vacationDays.includes(dateStr)) {
+            // Odznaczanie - zawsze dozwolone
             vacationDays = vacationDays.filter(d => d !== dateStr);
         } else {
+            // Zaznaczanie - sprawdź limit
+            if (vacationDays.length >= vacationLimit) {
+                showToast(`Osiągnięto limit ${vacationLimit} dni urlopu!`, 'error');
+                return;
+            }
             removeFromAll();
             vacationDays.push(dateStr);
         }
@@ -854,7 +903,6 @@ function getMonthData(monthIndex) {
         if (!_isWeekend) baseWorkingDaysCount++;
         if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
         
-        // Zliczaj święta w sobotę (dla informacji, nie dla obliczeń)
         if (isRealHoliday && dayOfWeek === 6) {
             saturdayHolidayCount++;
             const monthDay = dateStr.slice(5);
@@ -877,7 +925,6 @@ function getMonthData(monthIndex) {
         });
     }
 
-    // ZMIANA: Nie odejmujemy saturdayHolidayCount - święto w sobotę nie zmniejsza dni roboczych
     let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
     if (daysToWorkBase < 0) daysToWorkBase = 0;
 
@@ -906,7 +953,6 @@ function updateYearlyStats() {
     let totalRequired = 0;
     let totalVacation = 0;
     let totalSick = 0;
-    let totalSaturdayHolidays = 0;
 
     for (let m = 0; m < 12; m++) {
         const data = getMonthData(m);
@@ -914,25 +960,40 @@ function updateYearlyStats() {
         totalRequired += data.requiredDays;
         totalVacation += data.vacationCount;
         totalSick += data.sickLeaveCount;
-        totalSaturdayHolidays += data.saturdayHolidayCount;
     }
 
     document.getElementById('year-working-days').innerText = totalEffectiveWorking;
     document.getElementById('year-required-days').innerText = totalRequired;
-    document.getElementById('year-absence-days').innerText = totalVacation + totalSick;
-    document.getElementById('vacation-count').innerText = totalVacation;
-    document.getElementById('sick-count').innerText = totalSick;
 
-    // Aktualizuj informację o świętach w sobotę
-    if (totalSaturdayHolidays > 0) {
-        const saturdayHolidays = getSaturdayHolidays(currentYear);
-        const holidaysList = saturdayHolidays.map(h => `${h.name} (${h.formattedDate})`).join(', ');
-        
-        saturdayHolidaysCount.textContent = totalSaturdayHolidays;
-        saturdayHolidaysInfo.title = `Święta wypadające w sobotę: ${holidaysList}`;
-        saturdayHolidaysInfo.classList.remove('hidden');
+    // Urlop z informacją o pozostałych dniach
+    const vacationEl = document.getElementById('year-vacation-days');
+    vacationEl.innerText = totalVacation;
+    
+    const remaining = vacationLimit - totalVacation;
+    const remainingEl = document.getElementById('vacation-remaining');
+    remainingEl.innerText = remaining;
+    
+    // Kolorowanie urlopu w zależności od wykorzystania
+    if (totalVacation > vacationLimit) {
+        vacationEl.classList.remove('text-amber-600', 'text-green-600');
+        vacationEl.classList.add('text-red-600');
+        document.getElementById('vacation-remaining-info').innerHTML = `<span class="text-red-500">przekroczono o ${Math.abs(remaining)} dni!</span>`;
+    } else if (remaining <= 5 && remaining > 0) {
+        vacationEl.classList.remove('text-red-600', 'text-green-600');
+        vacationEl.classList.add('text-amber-600');
+        document.getElementById('vacation-remaining-info').innerHTML = `pozostało: <span class="text-amber-600 font-semibold">${remaining}</span> dni`;
     } else {
-        saturdayHolidaysInfo.classList.add('hidden');
+        vacationEl.classList.remove('text-red-600', 'text-amber-600');
+        vacationEl.classList.add('text-amber-600');
+        document.getElementById('vacation-remaining-info').innerHTML = `pozostało: <span>${remaining}</span> dni`;
+    }
+
+    // Informacja o L4
+    if (totalSick > 0) {
+        sickCountDisplay.innerText = totalSick;
+        sickLeaveInfo.classList.remove('hidden');
+    } else {
+        sickLeaveInfo.classList.add('hidden');
     }
 
     const selectedEl = document.getElementById('year-selected-days');
@@ -950,6 +1011,10 @@ function updateYearlyStats() {
 function renderCalendar() {
     const container = document.getElementById('calendar-grid');
     container.innerHTML = '';
+
+    // Oblicz pozostałe dni urlopu
+    const usedVacation = vacationDays.length;
+    const remainingVacation = vacationLimit - usedVacation;
 
     for (let m = 0; m < 12; m++) {
         const data = getMonthData(m);
@@ -977,7 +1042,7 @@ function renderCalendar() {
         let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
         let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
 
-        // Notka o święcie w sobotę - informacja o dodatkowym dniu wolnym
+        // Notka o święcie w sobotę
         let noteHtml = '';
         if (data.saturdayHolidayCount > 0) {
             const holidayNames = data.saturdayHolidayNames.join(', ');
@@ -1062,13 +1127,20 @@ function renderCalendar() {
                 } else {
                     classes += "bg-white text-slate-700 border border-slate-200 ";
                     if (currentMode === MODE_VACATION) {
-                        classes += "hover:bg-amber-50 hover:border-amber-300";
+                        // Jeśli limit osiągnięty, pokaż inny styl
+                        if (remainingVacation <= 0) {
+                            classes += "hover:bg-red-50 hover:border-red-300 opacity-60";
+                            title = `Limit urlopu (${vacationLimit} dni) wyczerpany!`;
+                        } else {
+                            classes += "hover:bg-amber-50 hover:border-amber-300";
+                            title = `Kliknij aby dodać urlop (pozostało ${remainingVacation} dni)`;
+                        }
                     } else if (currentMode === MODE_SICK) {
                         classes += "hover:bg-rose-50 hover:border-rose-300";
                     } else {
                         classes += "hover:bg-green-50 hover:border-green-300";
                     }
-                    title = "Praca zdalna (kliknij aby zmienić)";
+                    if (!title) title = "Praca zdalna (kliknij aby zmienić)";
                 }
                 html += `<div class="${classes}" ${onclick} title="${title}">${day.day}</div>`;
             }
@@ -1113,6 +1185,7 @@ window.signInWithGoogle = signInWithGoogle;
 window.signOutUser = signOutUser;
 window.changeYear = changeYear;
 window.changeTarget = changeTarget;
+window.changeVacationLimit = changeVacationLimit;
 window.clearAll = clearAll;
 window.setMode = setMode;
 window.toggleDay = toggleDay;
