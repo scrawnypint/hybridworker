@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planer Pracy Hybrydowej</title>
+    <title>Hybrid Work Planner</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
@@ -119,7 +119,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
 
-<!-- Wskaźnik ładowania -->
+<!-- Loading indicator -->
 <div id="loading-indicator">
     <div class="text-center">
         <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -128,30 +128,30 @@
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
             </path>
         </svg>
-        <p class="text-sm text-slate-600" id="loading-text">Ładowanie danych...</p>
+        <p class="text-sm text-slate-600" id="loading-text">Loading data...</p>
     </div>
 </div>
 
-<!-- Ekran logowania -->
+<!-- Auth screen -->
 <div id="auth-screen" class="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow-2xl border border-slate-200">
-    <h2 class="text-3xl font-bold text-blue-800 mb-2 text-center" id="auth-title">Zaloguj się</h2>
-    <p class="text-slate-500 text-sm text-center mb-6">Twój kalendarz zostanie zapisany w chmurze</p>
+    <h2 class="text-3xl font-bold text-blue-800 mb-2 text-center" id="auth-title">Sign in</h2>
+    <p class="text-slate-500 text-sm text-center mb-6">Your calendar will be saved in the cloud</p>
 
     <div id="auth-error" class="text-red-600 mb-4 text-center hidden p-3 bg-red-50 rounded-lg border border-red-200"></div>
 
-    <input type="email" id="auth-email" placeholder="Adres E-mail"
+    <input type="email" id="auth-email" placeholder="Email address"
            class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
-    <input type="password" id="auth-password" placeholder="Hasło"
+    <input type="password" id="auth-password" placeholder="Password"
            class="w-full p-3 mb-6 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition">
 
     <button id="auth-main-btn" onclick="handleAuth()"
             class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-        Zaloguj
+        Sign in
     </button>
 
     <div class="mt-4 flex items-center justify-center">
         <div class="w-full border-t border-slate-200"></div>
-        <div class="px-3 text-sm text-slate-400">LUB</div>
+        <div class="px-3 text-sm text-slate-400">OR</div>
         <div class="w-full border-t border-slate-200"></div>
     </div>
 
@@ -167,7 +167,7 @@
             <path fill="#34A853"
                   d="M24 47c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 40.53 14.54 47 24 47z"/>
         </svg>
-        <span id="google-btn-text">Zaloguj przez Google</span>
+        <span id="google-btn-text">Sign in with Google</span>
     </button>
 
     <button id="microsoft-auth-btn" onclick="signInWithMicrosoft()"
@@ -178,24 +178,24 @@
             <rect x="1" y="13" width="10" height="10" fill="#00A4EF"></rect>
             <rect x="13" y="13" width="10" height="10" fill="#FFB900"></rect>
         </svg>
-        <span id="microsoft-btn-text">Zaloguj przez Microsoft</span>
+        <span id="microsoft-btn-text">Sign in with Microsoft</span>
     </button>
 
     <p class="text-center mt-6 text-sm">
         <button id="auth-toggle-btn" onclick="toggleAuthMode()"
                 class="text-blue-500 hover:text-blue-700 font-medium">
-            Nie masz konta? Zarejestruj się!
+            Don't have an account? Register!
         </button>
     </p>
 </div>
 
-<!-- Aplikacja kalendarza -->
+<!-- Calendar app -->
 <div id="calendar-app" class="max-w-7xl mx-auto">
     <header class="mb-8 text-center">
         <div class="flex justify-center items-center gap-3 mb-2 flex-wrap">
             <h1 class="text-3xl md:text-4xl font-bold text-blue-900 flex items-center gap-2 flex-wrap justify-center"
                 id="main-title">
-                Kalendarz Pracy Hybrydowej
+                Hybrid Work Planner
                 <div class="relative inline-block">
                     <select id="year-selector" onchange="changeYear(this.value)" class="year-select text-blue-600">
                     </select>
@@ -205,78 +205,78 @@
         text
         text
 
-        <!-- Status użytkownika i synchronizacji -->
+        <!-- User & sync status -->
         <div class="flex justify-center items-center gap-3 mb-4 flex-wrap">
             <span class="text-slate-500 text-sm" id="user-email-display"></span>
             <div id="cloud-status" class="saved">
                 <span id="cloud-icon">☁️</span>
-                <span id="cloud-text">Zapisano</span>
+                <span id="cloud-text">Saved</span>
             </div>
         </div>
 
         <p class="text-slate-600 mb-4 flex justify-center items-center gap-3 flex-wrap">
             <span class="flex items-center gap-2">
-                Cel:
+                Goal:
                 <span class="relative inline-block">
                     <select id="target-selector" onchange="changeTarget(this.value)"
                             class="appearance-none font-bold text-blue-600 bg-blue-50 border-b-2 border-blue-200 hover:border-blue-400 cursor-pointer focus:outline-none focus:bg-blue-100 rounded px-2 py-0.5 text-center transition-all pr-6">
                     </select>
                     <span class="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400 text-xs">▼</span>
                 </span>
-                dni w biurze.
+                days in the office.
             </span>
 
             <span class="flex items-center gap-2">
-                Urlop:
+                Vacation:
                 <input id="vacation-limit-input"
                        type="number"
                        min="0"
                        step="1"
                        onchange="changeVacationLimit(this.value)"
                        class="w-20 text-center font-bold text-amber-600 bg-amber-50 border-b-2 border-amber-200 hover:border-amber-400 focus:outline-none focus:bg-amber-100 rounded px-2 py-0.5 text-sm"
-                       placeholder="np. 26">
-                dni
+                       placeholder="e.g. 26">
+                days
             </span>
         </p>
 
         <div class="flex flex-wrap justify-center gap-4 text-sm bg-white p-3 rounded-xl shadow-sm inline-flex">
-            <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Biuro</div>
-            <div class="flex items-center"><div class="w-4 h-4 bg-amber-400 rounded mr-2"></div>Urlop</div>
-            <div class="flex items-center"><div class="w-4 h-4 bg-rose-400 rounded mr-2"></div>L4</div>
-            <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Praca zdalna</div>
+            <div class="flex items-center"><div class="w-4 h-4 bg-green-500 rounded mr-2"></div>Office</div>
+            <div class="flex items-center"><div class="w-4 h-4 bg-amber-400 rounded mr-2"></div>Vacation</div>
+            <div class="flex items-center"><div class="w-4 h-4 bg-rose-400 rounded mr-2"></div>Sick leave</div>
+            <div class="flex items-center"><div class="w-4 h-4 bg-white border border-slate-300 rounded mr-2"></div>Remote work</div>
             <div class="flex items-center"><div class="w-4 h-4 bg-slate-100 border border-slate-200 rounded mr-2"></div>Weekend</div>
-            <div class="flex items-center"><div class="w-4 h-4 bg-red-100 border border-red-200 rounded mr-2"></div>Święto</div>
+            <div class="flex items-center"><div class="w-4 h-4 bg-red-100 border border-red-200 rounded mr-2"></div>Public holiday</div>
         </div>
 
         <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
             <div>
-                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Do przepracowania</div>
+                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">To work</div>
                 <div class="text-xl font-bold text-slate-700" id="year-working-days">0</div>
-                <div class="text-xs text-slate-400 font-normal">(po odjęciu nieobecności)</div>
+                <div class="text-xs text-slate-400 font-normal">(after absences)</div>
             </div>
             <div>
-                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Cel (<span id="summary-target-label">40%</span>)</div>
+                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Target (<span id="summary-target-label">40%</span>)</div>
                 <div class="text-xl font-bold text-blue-600" id="year-required-days">0</div>
             </div>
             <div>
-                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">W biurze</div>
+                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">In the office</div>
                 <div class="text-xl font-bold text-green-600" id="year-selected-days">0</div>
             </div>
             <div>
-                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Nieobecności</div>
+                <div class="text-slate-500 text-xs uppercase tracking-wider font-semibold">Absences</div>
                 <div class="text-xl font-bold text-amber-600" id="year-absence-days">0</div>
                 <div class="text-xs text-slate-400 font-normal">
-                    <span id="vacation-count">0</span> urlop / <span id="sick-count">0</span> L4
+                    <span id="vacation-count">0</span> vacation / <span id="sick-count">0</span> sick leave
                 </div>
             </div>
         </div>
 
         <div class="mt-4 text-sm text-slate-400 text-center flex flex-wrap justify-center gap-4">
             <button onclick="clearAll()" class="text-red-400 hover:text-red-600 underline text-xs">
-                🗑️ Zresetuj rok <span class="current-year-display"></span>
+                🗑️ Reset year <span class="current-year-display"></span>
             </button>
             <button onclick="signOutUser()" class="text-slate-400 hover:text-slate-600 underline text-xs">
-                🚪 Wyloguj
+                🚪 Sign out
             </button>
         </div>
     </header>
@@ -284,8 +284,8 @@
     <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
 
     <footer class="mt-12 text-center text-slate-400 text-sm pb-8">
-        ☁️ Twoje dane są automatycznie zapisywane w chmurze Firebase.<br>
-        Po ponownym zalogowaniu zobaczysz swój kalendarz w ostatnim zapisanym stanie.
+        ☁️ Your data is automatically saved in Firebase Cloud.<br>
+        When you sign in again, you will see your calendar in its last saved state.
     </footer>
 </div>
 
@@ -310,7 +310,7 @@
         setDoc
     } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
-    // --- KONFIGURACJA FIREBASE ---
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyAV5MvDejW_cefwyx-ZeBKqWcjUveyYEs0",
         authDomain: "hybridworker.firebaseapp.com",
@@ -330,37 +330,37 @@
     googleProvider.addScope('profile');
     googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-    // Provider Microsoft (Azure AD / Microsoft 365)
+    // Microsoft provider (Azure AD / Microsoft 365)
     const microsoftProvider = new OAuthProvider('microsoft.com');
     microsoftProvider.setCustomParameters({ prompt: 'select_account' });
-    // Podstawowy scope z Graph API – pozwala odczytać podstawowe dane użytkownika
     microsoftProvider.addScope('User.Read');
 
-    // --- STAŁE I ZMIENNE ---
+    // --- CONSTANTS & STATE ---
     const MIN_YEAR = 2025;
     const MAX_YEAR = 2035;
     const nowYear = new Date().getFullYear();
     let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
     let targetPercentage = 0.40;
-    let vacationLimit = null; // limit dni urlopu (null = brak limitu)
+    let vacationLimit = null; // vacation days limit (null = no limit)
     let holidaysCache = [];
 
     const MONTH_NAMES = [
-        "Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-        "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
     ];
-    const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
+    const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+    // Polish public holidays, names shown in English
     const HOLIDAY_NAMES = {
-        '01-01': 'Nowy Rok',
-        '01-06': 'Trzech Króli',
-        '05-01': 'Święto Pracy',
-        '05-03': 'Święto Konstytucji 3 Maja',
-        '08-15': 'Wniebowzięcie NMP',
-        '11-01': 'Wszystkich Świętych',
-        '11-11': 'Święto Niepodległości',
-        '12-25': 'Boże Narodzenie',
-        '12-26': 'Drugi dzień Bożego Narodzenia'
+        '01-01': "New Year's Day",
+        '01-06': 'Epiphany',
+        '05-01': 'Labour Day',
+        '05-03': 'Constitution Day (3 May)',
+        '08-15': 'Assumption of Mary',
+        '11-01': "All Saints' Day",
+        '11-11': 'Independence Day',
+        '12-25': 'Christmas Day',
+        '12-26': 'Second Day of Christmas'
     };
 
     const MODE_OFFICE = 'office';
@@ -380,7 +380,7 @@
     let saveTimeout = null;
     let isSaving = false;
 
-    // --- ELEMENTY DOM ---
+    // --- DOM ELEMENTS ---
     const authScreen = document.getElementById('auth-screen');
     const calendarApp = document.getElementById('calendar-app');
     const authTitle = document.getElementById('auth-title');
@@ -399,8 +399,8 @@
     const cloudText = document.getElementById('cloud-text');
     const vacationLimitInput = document.getElementById('vacation-limit-input');
 
-    // --- FUNKCJE POMOCNICZE ---
-    function showLoading(text = 'Ładowanie...') {
+    // --- HELPERS ---
+    function showLoading(text = 'Loading...') {
         loadingText.textContent = text;
         loadingIndicator.style.display = 'block';
     }
@@ -416,43 +416,43 @@
             case 'saving':
                 cloudIcon.textContent = '☁️';
                 cloudIcon.className = 'cloud-saving';
-                cloudText.textContent = 'Zapisywanie...';
+                cloudText.textContent = 'Saving...';
                 break;
             case 'saved':
                 cloudIcon.textContent = '✅';
-                cloudText.textContent = 'Zapisano w chmurze';
+                cloudText.textContent = 'Saved to cloud';
                 break;
             case 'error':
                 cloudIcon.textContent = '❌';
-                cloudText.textContent = 'Błąd zapisu';
+                cloudText.textContent = 'Save error';
                 break;
             case 'loading':
                 cloudIcon.textContent = '🔄';
-                cloudText.textContent = 'Ładowanie...';
+                cloudText.textContent = 'Loading...';
                 break;
         }
     }
 
     function setGoogleButtonLoading(isLoading) {
         googleAuthBtn.disabled = isLoading;
-        googleBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Google';
+        googleBtnText.textContent = isLoading ? 'Signing in...' : 'Sign in with Google';
         googleAuthBtn.classList.toggle('opacity-70', isLoading);
     }
 
     function setMicrosoftButtonLoading(isLoading) {
         if (!microsoftAuthBtn) return;
         microsoftAuthBtn.disabled = isLoading;
-        microsoftBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Microsoft';
+        microsoftBtnText.textContent = isLoading ? 'Signing in...' : 'Sign in with Microsoft';
         microsoftAuthBtn.classList.toggle('opacity-70', isLoading);
     }
 
-    // --- AUTORYZACJA ---
+    // --- AUTH ---
 
     function toggleAuthMode() {
         isLoginMode = !isLoginMode;
-        authTitle.innerText = isLoginMode ? "Zaloguj się" : "Zarejestruj się";
-        authMainBtn.innerText = isLoginMode ? "Zaloguj" : "Zarejestruj";
-        authToggleBtn.innerText = isLoginMode ? "Nie masz konta? Zarejestruj się!" : "Masz już konto? Zaloguj się!";
+        authTitle.innerText = isLoginMode ? "Sign in" : "Register";
+        authMainBtn.innerText = isLoginMode ? "Sign in" : "Register";
+        authToggleBtn.innerText = isLoginMode ? "Don't have an account? Register!" : "Already have an account? Sign in!";
         authError.classList.add('hidden');
     }
 
@@ -463,12 +463,12 @@
         authMainBtn.disabled = true;
 
         if (!email || !password) {
-            showAuthError("Wypełnij oba pola.");
+            showAuthError("Please fill in both fields.");
             authMainBtn.disabled = false;
             return;
         }
 
-        showLoading(isLoginMode ? 'Logowanie...' : 'Rejestracja...');
+        showLoading(isLoginMode ? 'Signing in...' : 'Registering...');
 
         try {
             if (isLoginMode) {
@@ -477,29 +477,29 @@
                 await createUserWithEmailAndPassword(auth, email, password);
             }
         } catch (error) {
-            console.error("Błąd autoryzacji:", error.code);
-            let message = "Wystąpił błąd. Spróbuj ponownie.";
+            console.error("Auth error:", error.code);
+            let message = "An error occurred. Please try again.";
 
             switch (error.code) {
                 case 'auth/wrong-password':
                 case 'auth/user-not-found':
                 case 'auth/invalid-credential':
-                    message = "Nieprawidłowy e-mail lub hasło.";
+                    message = "Invalid email or password.";
                     break;
                 case 'auth/email-already-in-use':
-                    message = "Ten e-mail jest już zajęty.";
+                    message = "This email is already in use.";
                     break;
                 case 'auth/weak-password':
-                    message = "Hasło musi mieć co najmniej 6 znaków.";
+                    message = "Password must be at least 6 characters.";
                     break;
                 case 'auth/invalid-email':
-                    message = "Nieprawidłowy format e-mail.";
+                    message = "Invalid email format.";
                     break;
                 case 'auth/too-many-requests':
-                    message = "Zbyt wiele prób. Poczekaj chwilę.";
+                    message = "Too many attempts. Please wait a moment.";
                     break;
                 case 'auth/network-request-failed':
-                    message = "Błąd sieci.";
+                    message = "Network error.";
                     break;
             }
 
@@ -519,32 +519,32 @@
         try {
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
-            console.error("Błąd Google Auth:", error.code);
-            let message = "Błąd logowania przez Google.";
+            console.error("Google Auth error:", error.code);
+            let message = "Error signing in with Google.";
             let shouldTryRedirect = false;
 
             switch (error.code) {
                 case 'auth/popup-closed-by-user':
-                    message = "Okno zamknięte. Spróbuj ponownie.";
+                    message = "Popup closed. Please try again.";
                     break;
                 case 'auth/popup-blocked':
                     shouldTryRedirect = true;
                     break;
                 case 'auth/operation-not-allowed':
-                    message = "Google Auth nie jest włączone.";
+                    message = "Google sign-in is not enabled.";
                     break;
                 case 'auth/network-request-failed':
-                    message = "Błąd sieci.";
+                    message = "Network error.";
                     break;
             }
 
             if (shouldTryRedirect) {
                 try {
-                    showLoading('Przekierowanie...');
+                    showLoading('Redirecting...');
                     await signInWithRedirect(auth, googleProvider);
                     return;
                 } catch (e) {
-                    message = "Odblokuj popupy i spróbuj ponownie.";
+                    message = "Please allow popups and try again.";
                 }
             }
 
@@ -565,35 +565,35 @@
         try {
             await signInWithPopup(auth, microsoftProvider);
         } catch (error) {
-            console.error("Błąd Microsoft Auth:", error.code);
-            let message = "Błąd logowania przez Microsoft.";
+            console.error("Microsoft Auth error:", error.code);
+            let message = "Error signing in with Microsoft.";
             let shouldTryRedirect = false;
 
             switch (error.code) {
                 case 'auth/popup-closed-by-user':
-                    message = "Okno zamknięte. Spróbuj ponownie.";
+                    message = "Popup closed. Please try again.";
                     break;
                 case 'auth/popup-blocked':
                     shouldTryRedirect = true;
                     break;
                 case 'auth/operation-not-allowed':
-                    message = "Logowanie Microsoft nie jest włączone w Firebase.";
+                    message = "Microsoft sign-in is not enabled in Firebase.";
                     break;
                 case 'auth/network-request-failed':
-                    message = "Błąd sieci.";
+                    message = "Network error.";
                     break;
                 case 'auth/account-exists-with-different-credential':
-                    message = "Konto z tym adresem e-mail istnieje już z inną metodą logowania.";
+                    message = "An account with this email already exists with a different sign-in method.";
                     break;
             }
 
             if (shouldTryRedirect) {
                 try {
-                    showLoading('Przekierowanie...');
+                    showLoading('Redirecting...');
                     await signInWithRedirect(auth, microsoftProvider);
                     return;
                 } catch (e) {
-                    message = "Odblokuj popupy i spróbuj ponownie.";
+                    message = "Please allow popups and try again.";
                 }
             }
 
@@ -609,11 +609,11 @@
         try {
             const result = await getRedirectResult(auth);
             if (result) {
-                console.log("✅ Zalogowano przez redirect");
+                console.log("✅ Signed in via redirect");
             }
         } catch (error) {
-            console.error("Błąd redirect:", error);
-            showAuthError("Błąd logowania. Spróbuj ponownie.");
+            console.error("Redirect error:", error);
+            showAuthError("Sign-in error. Please try again.");
         }
     }
 
@@ -632,9 +632,9 @@
     }
 
     function signOutUser() {
-        if (confirm('Czy na pewno chcesz się wylogować?\nTwoje dane są bezpiecznie zapisane w chmurze.')) {
+        if (confirm('Are you sure you want to sign out?\nYour data is safely stored in the cloud.')) {
             signOut(auth).catch((error) => {
-                console.error("Błąd wylogowania:", error);
+                console.error("Sign-out error:", error);
             });
         }
     }
@@ -652,14 +652,15 @@
         authError.classList.add('hidden');
     }
 
-    // --- FIREBASE FIRESTORE ---
+    // --- FIRESTORE ---
+
     function getDocRef() {
         return doc(db, "users", currentUserID);
     }
 
     async function loadState() {
         updateCloudStatus('loading');
-        showLoading('Ładowanie Twojego kalendarza...');
+        showLoading('Loading your calendar...');
 
         try {
             const docRef = getDocRef();
@@ -674,20 +675,20 @@
                     vacationDays = yearData.vacationDays || [];
                     sickLeaveDays = yearData.sickLeaveDays || [];
                     vacationLimit = (typeof yearData.vacationLimit === 'number') ? yearData.vacationLimit : null;
-                    console.log(`✅ Załadowano dane dla roku ${currentYear}`);
+                    console.log(`✅ Loaded data for year ${currentYear}`);
                 } else {
-                    console.log(`ℹ️ Brak danych dla roku ${currentYear}`);
+                    console.log(`ℹ️ No data for year ${currentYear}`);
                     resetToDefaults();
                 }
             } else {
-                console.log("ℹ️ Nowy użytkownik");
+                console.log("ℹ️ New user");
                 resetToDefaults();
                 await saveState();
             }
 
             updateCloudStatus('saved');
         } catch (e) {
-            console.error("❌ Błąd ładowania:", e);
+            console.error("Load error:", e);
             updateCloudStatus('error');
             resetToDefaults();
         } finally {
@@ -738,10 +739,10 @@
                     { merge: true }
                 );
 
-                console.log(`✅ Zapisano w Firebase dla roku ${currentYear}`);
+                console.log(`✅ Saved to Firebase for year ${currentYear}`);
                 updateCloudStatus('saved');
             } catch (e) {
-                console.error("❌ Błąd zapisu:", e);
+                console.error("Save error:", e);
                 updateCloudStatus('error');
             } finally {
                 isSaving = false;
@@ -749,7 +750,8 @@
         }, 800);
     }
 
-    // --- LOGIKA KALENDARZA ---
+    // --- CALENDAR LOGIC ---
+
     function getEasterDate(year) {
         const a = year % 19;
         const b = Math.floor(year / 100);
@@ -789,10 +791,10 @@
         ];
 
         const easter = getEasterDate(year);
-        h.push(formatDate(easter));
-        h.push(formatDate(addDays(easter, 1)));
-        h.push(formatDate(addDays(easter, 49)));
-        h.push(formatDate(addDays(easter, 60)));
+        h.push(formatDate(easter));              // Easter Sunday
+        h.push(formatDate(addDays(easter, 1)));  // Easter Monday
+        h.push(formatDate(addDays(easter, 49))); // Pentecost
+        h.push(formatDate(addDays(easter, 60))); // Corpus Christi
 
         return h;
     }
@@ -885,6 +887,7 @@
         const currentMode = monthModes[monthIndex];
         const date = new Date(dateStr);
 
+        // Do not change weekends or "real" public holidays (except Christmas Eve)
         if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
 
         const removeFromAll = () => {
@@ -904,8 +907,9 @@
             if (vacationDays.includes(dateStr)) {
                 vacationDays = vacationDays.filter(d => d !== dateStr);
             } else {
+                // Check vacation limit
                 if (vacationLimit !== null && vacationLimit >= 0 && vacationDays.length >= vacationLimit) {
-                    alert('Osiągnięto ustawiony limit dni urlopu.');
+                    alert('You have reached the configured vacation days limit.');
                     return;
                 }
                 removeFromAll();
@@ -926,7 +930,7 @@
     }
 
     function clearAll() {
-        if (confirm(`Wyczyścić wszystkie zaznaczenia dla roku ${currentYear}?\n\nTa operacja usunie wszystkie dni biurowe, urlopy i L4.`)) {
+        if (confirm(`Clear all selections for year ${currentYear}?\n\nThis will remove all office days, vacations and sick leaves.`)) {
             officeDays = [];
             vacationDays = [];
             sickLeaveDays = [];
@@ -955,7 +959,7 @@
             const _isWeekend = isWeekend(currentDate);
             const dayOfWeek = currentDate.getDay();
 
-            const isWigilia = (dateStr === `${currentYear}-12-24`);
+            const isWigilia = (dateStr === `${currentYear}-12-24`); // Christmas Eve treated specially
             const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
             const isVisualHoliday = holidaysCache.includes(dateStr) || isWigilia;
 
@@ -966,10 +970,11 @@
             if (!_isWeekend) baseWorkingDaysCount++;
             if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
 
+            // Public holidays on Saturday (for info, not for working days calc)
             if (isRealHoliday && dayOfWeek === 6) {
                 saturdayHolidayCount++;
                 const monthDay = dateStr.slice(5);
-                const name = HOLIDAY_NAMES[monthDay] || 'Święto';
+                const name = HOLIDAY_NAMES[monthDay] || 'Holiday';
                 saturdayHolidayNames.push(name);
             }
 
@@ -988,6 +993,7 @@
             });
         }
 
+        // Do not subtract saturdayHolidayCount – holiday on Saturday does not reduce working days
         let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
         if (daysToWorkBase < 0) daysToWorkBase = 0;
 
@@ -1074,12 +1080,13 @@
                 ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
                 : '';
 
+            // Note about holidays on Saturday – extra day off info
             let noteHtml = '';
             if (data.saturdayHolidayCount > 0) {
                 const holidayNames = data.saturdayHolidayNames.join(', ');
                 noteHtml = `
                     <div class="mx-4 mt-2 px-3 py-2 bg-purple-50 border border-purple-100 rounded-md text-xs text-purple-800">
-                        🎁 <strong>${data.saturdayHolidayCount} dodatkowy dzień wolny</strong> do wykorzystania (${holidayNames} wypada w sobotę)
+                        🎁 <strong>${data.saturdayHolidayCount} extra day off</strong> available (${holidayNames} falls on Saturday)
                     </div>
                 `;
             }
@@ -1087,8 +1094,8 @@
             let absenceSummary = '';
             if (data.vacationCount > 0 || data.sickLeaveCount > 0) {
                 const parts = [];
-                if (data.vacationCount > 0) parts.push(`${data.vacationCount}u`);
-                if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount}L4`);
+                if (data.vacationCount > 0) parts.push(`${data.vacationCount}v`);
+                if (data.sickLeaveCount > 0) parts.push(`${data.sickLeaveCount}s`);
                 absenceSummary = `<span class="text-amber-600">(${parts.join('/')})</span>`;
             }
 
@@ -1102,9 +1109,9 @@
                         </div>
                     </div>
                     <div class="flex gap-2 mode-buttons">
-                        <button onclick="setMode(${m}, '${MODE_OFFICE}')" class="${btnBase} ${officeBtnClass}">🏢 Biuro</button>
-                        <button onclick="setMode(${m}, '${MODE_VACATION}')" class="${btnBase} ${vacationBtnClass}">🏖️ Urlop</button>
-                        <button onclick="setMode(${m}, '${MODE_SICK}')" class="${btnBase} ${sickBtnClass}">🏥 L4</button>
+                        <button onclick="setMode(${m}, '${MODE_OFFICE}')" class="${btnBase} ${officeBtnClass}">🏢 Office</button>
+                        <button onclick="setMode(${m}, '${MODE_VACATION}')" class="${btnBase} ${vacationBtnClass}">🏖️ Vacation</button>
+                        <button onclick="setMode(${m}, '${MODE_SICK}')" class="${btnBase} ${sickBtnClass}">🏥 Sick leave</button>
                     </div>
                 </div>
                 <div class="w-full h-1.5 bg-slate-100">
@@ -1113,14 +1120,14 @@
                 ${noteHtml}
                 <div class="p-4 flex-grow pt-2">
                     <div class="flex justify-between text-xs text-slate-400 mb-2 px-1">
-                        <span>Pracujące: ${data.effectiveWorkingDays} ${absenceSummary}</span>
-                        <span>Cel: ${data.requiredDays}</span>
+                        <span>Working: ${data.effectiveWorkingDays} ${absenceSummary}</span>
+                        <span>Target: ${data.requiredDays}</span>
                     </div>
                     <div class="grid grid-cols-7 gap-1 mb-2 text-center">
                         ${DAY_NAMES.map(n => `<div class="text-xs font-bold text-slate-400">${n}</div>`).join('')}
                     </div>
                     <div class="grid grid-cols-7 gap-1 text-sm">
-            `;
+           `;
 
             for (let i = 0; i < data.firstDayOffset; i++) {
                 html += `<div class="aspect-square"></div>`;
@@ -1134,7 +1141,7 @@
                 if (day.isHoliday) {
                     classes += "bg-red-50 text-red-400 border border-red-100 disabled cursor-not-allowed";
                     const monthDay = day.dateStr.slice(5);
-                    title = day.isWigilia ? 'Wigilia' : (HOLIDAY_NAMES[monthDay] || 'Święto');
+                    title = day.isWigilia ? 'Christmas Eve' : (HOLIDAY_NAMES[monthDay] || 'Holiday');
                     html += `<div class="${classes}" title="${title}">${day.day}<span class="absolute top-0 right-0 w-2 h-2 bg-red-400 rounded-full -mr-0.5 -mt-0.5 opacity-50"></span></div>`;
                 } else if (day.isWeekend) {
                     classes += "bg-slate-100 text-slate-400 disabled cursor-default";
@@ -1144,13 +1151,13 @@
 
                     if (day.isOffice) {
                         classes += "bg-green-500 text-white shadow-md shadow-green-200 border border-green-600";
-                        title = "Dzień w biurze";
+                        title = "Office day";
                     } else if (day.isVacation) {
                         classes += "bg-amber-400 text-white shadow-md shadow-amber-200 border border-amber-500";
-                        title = "Urlop";
+                        title = "Vacation";
                     } else if (day.isSickLeave) {
                         classes += "bg-rose-400 text-white shadow-md shadow-rose-200 border border-rose-500";
-                        title = "Zwolnienie lekarskie (L4)";
+                        title = "Sick leave";
                     } else {
                         classes += "bg-white text-slate-700 border border-slate-200 ";
                         if (currentMode === MODE_VACATION) {
@@ -1160,7 +1167,7 @@
                         } else {
                             classes += "hover:bg-green-50 hover:border-green-300";
                         }
-                        title = "Praca zdalna (kliknij aby zmienić)";
+                        title = "Remote work (click to change)";
                     }
 
                     html += `<div class="${classes}" ${onclick} title="${title}">${day.day}</div>`;
@@ -1182,24 +1189,24 @@
         renderCalendar();
     }
 
-    // --- INICJALIZACJA ---
+    // --- INIT ---
     document.addEventListener('DOMContentLoaded', async () => {
-        showLoading('Inicjalizacja...');
+        showLoading('Initializing...');
         await handleRedirectResult();
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                console.log("👤 Zalogowano:", user.email);
+                console.log("👤 Signed in as:", user.email);
                 await setCurrentUser(user);
             } else {
-                console.log("👤 Wylogowano");
+                console.log("👤 Signed out");
                 unsetCurrentUser();
             }
             hideLoading();
         });
     });
 
-    // --- GLOBAL ---
+    // --- GLOBAL EXPORTS ---
     window.handleAuth = handleAuth;
     window.toggleAuthMode = toggleAuthMode;
     window.signInWithGoogle = signInWithGoogle;
