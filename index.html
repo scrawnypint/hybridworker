@@ -90,7 +90,6 @@ body { font-family: 'Inter', sans-serif; }
     animation: pulse 1s infinite;
 }
 
-/* Styl dla inputa dni urlopowych */
 .vacation-input {
     width: 50px;
     text-align: center;
@@ -112,6 +111,16 @@ body { font-family: 'Inter', sans-serif; }
 .vacation-input:focus {
     border-bottom-color: #f59e0b;
     background: #fef3c7;
+}
+
+/* Animacja zaznaczenia */
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+.day-cell.just-clicked {
+    animation: pop 0.2s ease-out;
 }
 </style>
 </head>
@@ -310,14 +319,13 @@ const nowYear = new Date().getFullYear();
 let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
 
 let targetPercentage = 0.40;
-let vacationLimit = 26; // Domyślny limit dni urlopowych
+let vacationLimit = 26;
 let holidaysCache = [];
 
 const MONTH_NAMES = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
                      "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 const DAY_NAMES = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 
-// Nazwy świąt
 const HOLIDAY_NAMES = {
     '01-01': 'Nowy Rok',
     '01-06': 'Trzech Króli',
@@ -346,36 +354,21 @@ let isGoogleSignInInProgress = false;
 let saveTimeout = null;
 let isSaving = false;
 
-// --- ELEMENTY DOM ---
-const authScreen = document.getElementById('auth-screen');
-const calendarApp = document.getElementById('calendar-app');
-const authTitle = document.getElementById('auth-title');
-const authMainBtn = document.getElementById('auth-main-btn');
-const authToggleBtn = document.getElementById('auth-toggle-btn');
-const authError = document.getElementById('auth-error');
-const googleAuthBtn = document.getElementById('google-auth-btn');
-const googleBtnText = document.getElementById('google-btn-text');
-const loadingIndicator = document.getElementById('loading-indicator');
-const loadingText = document.getElementById('loading-text');
-const userEmailDisplay = document.getElementById('user-email-display');
-const cloudStatus = document.getElementById('cloud-status');
-const cloudIcon = document.getElementById('cloud-icon');
-const cloudText = document.getElementById('cloud-text');
-const vacationLimitInput = document.getElementById('vacation-limit-input');
-const sickLeaveInfo = document.getElementById('sick-leave-info');
-const sickCountDisplay = document.getElementById('sick-count-display');
-
 // --- FUNKCJE POMOCNICZE ---
 function showLoading(text = 'Ładowanie...') { 
-    loadingText.textContent = text;
-    loadingIndicator.style.display = 'block'; 
+    document.getElementById('loading-text').textContent = text;
+    document.getElementById('loading-indicator').style.display = 'block'; 
 }
 
 function hideLoading() { 
-    loadingIndicator.style.display = 'none'; 
+    document.getElementById('loading-indicator').style.display = 'none'; 
 }
 
 function updateCloudStatus(status) {
+    const cloudStatus = document.getElementById('cloud-status');
+    const cloudIcon = document.getElementById('cloud-icon');
+    const cloudText = document.getElementById('cloud-text');
+    
     cloudStatus.className = status;
     cloudIcon.className = '';
     
@@ -401,15 +394,20 @@ function updateCloudStatus(status) {
 }
 
 function setGoogleButtonLoading(isLoading) {
-    googleAuthBtn.disabled = isLoading;
-    googleBtnText.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Google';
-    googleAuthBtn.classList.toggle('opacity-70', isLoading);
+    const btn = document.getElementById('google-auth-btn');
+    const text = document.getElementById('google-btn-text');
+    btn.disabled = isLoading;
+    text.textContent = isLoading ? 'Logowanie...' : 'Zaloguj przez Google';
+    btn.classList.toggle('opacity-70', isLoading);
 }
 
 function showToast(message, type = 'info') {
+    const existing = document.querySelector('.toast-message');
+    if (existing) existing.remove();
+    
     const toast = document.createElement('div');
     const bgColor = type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-slate-700';
-    toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm`;
+    toast.className = `toast-message fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm`;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
@@ -418,15 +416,18 @@ function showToast(message, type = 'info') {
 // --- AUTORYZACJA ---
 function toggleAuthMode() {
     isLoginMode = !isLoginMode;
-    authTitle.innerText = isLoginMode ? "Zaloguj się" : "Zarejestruj się";
-    authMainBtn.innerText = isLoginMode ? "Zaloguj" : "Zarejestruj";
-    authToggleBtn.innerText = isLoginMode ? "Nie masz konta? Zarejestruj się!" : "Masz już konto? Zaloguj się!";
-    authError.classList.add('hidden');
+    document.getElementById('auth-title').innerText = isLoginMode ? "Zaloguj się" : "Zarejestruj się";
+    document.getElementById('auth-main-btn').innerText = isLoginMode ? "Zaloguj" : "Zarejestruj";
+    document.getElementById('auth-toggle-btn').innerText = isLoginMode ? "Nie masz konta? Zarejestruj się!" : "Masz już konto? Zaloguj się!";
+    document.getElementById('auth-error').classList.add('hidden');
 }
 
 async function handleAuth() {
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
+    const authError = document.getElementById('auth-error');
+    const authMainBtn = document.getElementById('auth-main-btn');
+    
     authError.classList.add('hidden');
     authMainBtn.disabled = true;
 
@@ -480,7 +481,7 @@ async function signInWithGoogle() {
     if (isGoogleSignInInProgress) return;
     
     isGoogleSignInInProgress = true;
-    authError.classList.add('hidden');
+    document.getElementById('auth-error').classList.add('hidden');
     setGoogleButtonLoading(true);
 
     try {
@@ -537,6 +538,7 @@ async function handleRedirectResult() {
 }
 
 function showAuthError(message) {
+    const authError = document.getElementById('auth-error');
     authError.innerHTML = message;
     authError.classList.remove('hidden');
 }
@@ -545,10 +547,9 @@ async function setCurrentUser(user) {
     currentUserID = user.uid;
     currentUserEmail = user.email;
     
-    authScreen.style.display = 'none';
-    calendarApp.style.display = 'block';
-    
-    userEmailDisplay.textContent = currentUserEmail;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('calendar-app').style.display = 'block';
+    document.getElementById('user-email-display').textContent = currentUserEmail;
     
     await initCalendarApp();
 }
@@ -564,8 +565,8 @@ function signOutUser() {
 function unsetCurrentUser() {
     currentUserID = null;
     currentUserEmail = null;
-    authScreen.style.display = 'block';
-    calendarApp.style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'block';
+    document.getElementById('calendar-app').style.display = 'none';
     
     officeDays = [];
     vacationDays = [];
@@ -573,7 +574,7 @@ function unsetCurrentUser() {
     
     document.getElementById('auth-email').value = '';
     document.getElementById('auth-password').value = '';
-    authError.classList.add('hidden');
+    document.getElementById('auth-error').classList.add('hidden');
 }
 
 // --- FIREBASE FIRESTORE ---
@@ -612,9 +613,7 @@ async function loadState() {
             await saveState();
         }
         
-        // Aktualizuj input limitu urlopu
-        vacationLimitInput.value = vacationLimit;
-        
+        document.getElementById('vacation-limit-input').value = vacationLimit;
         updateCloudStatus('saved');
         
     } catch (e) {
@@ -789,19 +788,18 @@ function changeTarget(val) {
 
 function changeVacationLimit(val) {
     const newLimit = parseInt(val) || 0;
+    const input = document.getElementById('vacation-limit-input');
     
-    // Walidacja
     if (newLimit < 0) {
-        vacationLimitInput.value = 0;
+        input.value = 0;
         vacationLimit = 0;
     } else if (newLimit > 365) {
-        vacationLimitInput.value = 365;
+        input.value = 365;
         vacationLimit = 365;
     } else {
         vacationLimit = newLimit;
     }
     
-    // Sprawdź czy obecna liczba urlopów nie przekracza nowego limitu
     if (vacationDays.length > vacationLimit) {
         showToast(`Uwaga: Masz zaznaczone ${vacationDays.length} dni urlopu, a limit to ${vacationLimit}`, 'warning');
     }
@@ -816,18 +814,23 @@ function setMode(monthIndex, mode) {
     renderCalendar();
 }
 
+// POPRAWIONA FUNKCJA - natychmiastowe odświeżanie
 function toggleDay(dateStr, monthIndex) {
     const currentMode = monthModes[monthIndex];
     const date = new Date(dateStr);
 
-    if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
+    // Sprawdź czy można kliknąć
+    if (isWeekend(date)) return;
+    if (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`) return;
 
+    // Funkcja usuwająca z wszystkich list
     const removeFromAll = () => {
         officeDays = officeDays.filter(d => d !== dateStr);
         vacationDays = vacationDays.filter(d => d !== dateStr);
         sickLeaveDays = sickLeaveDays.filter(d => d !== dateStr);
     };
 
+    // Obsługa w zależności od trybu
     if (currentMode === MODE_OFFICE) {
         if (officeDays.includes(dateStr)) {
             officeDays = officeDays.filter(d => d !== dateStr);
@@ -837,10 +840,9 @@ function toggleDay(dateStr, monthIndex) {
         }
     } else if (currentMode === MODE_VACATION) {
         if (vacationDays.includes(dateStr)) {
-            // Odznaczanie - zawsze dozwolone
             vacationDays = vacationDays.filter(d => d !== dateStr);
         } else {
-            // Zaznaczanie - sprawdź limit
+            // Sprawdź limit
             if (vacationDays.length >= vacationLimit) {
                 showToast(`Osiągnięto limit ${vacationLimit} dni urlopu!`, 'error');
                 return;
@@ -857,9 +859,12 @@ function toggleDay(dateStr, monthIndex) {
         }
     }
     
-    saveState();
+    // NATYCHMIASTOWE ODŚWIEŻENIE
     updateYearlyStats();
     renderCalendar();
+    
+    // Zapis w tle (z debounce)
+    saveState();
 }
 
 function clearAll() {
@@ -867,9 +872,9 @@ function clearAll() {
         officeDays = [];
         vacationDays = [];
         sickLeaveDays = [];
-        saveState();
         updateYearlyStats();
         renderCalendar();
+        saveState();
     }
 }
 
@@ -965,32 +970,26 @@ function updateYearlyStats() {
     document.getElementById('year-working-days').innerText = totalEffectiveWorking;
     document.getElementById('year-required-days').innerText = totalRequired;
 
-    // Urlop z informacją o pozostałych dniach
     const vacationEl = document.getElementById('year-vacation-days');
     vacationEl.innerText = totalVacation;
     
     const remaining = vacationLimit - totalVacation;
-    const remainingEl = document.getElementById('vacation-remaining');
-    remainingEl.innerText = remaining;
+    document.getElementById('vacation-remaining').innerText = remaining;
     
-    // Kolorowanie urlopu w zależności od wykorzystania
     if (totalVacation > vacationLimit) {
-        vacationEl.classList.remove('text-amber-600', 'text-green-600');
-        vacationEl.classList.add('text-red-600');
+        vacationEl.className = 'text-xl font-bold text-red-600';
         document.getElementById('vacation-remaining-info').innerHTML = `<span class="text-red-500">przekroczono o ${Math.abs(remaining)} dni!</span>`;
     } else if (remaining <= 5 && remaining > 0) {
-        vacationEl.classList.remove('text-red-600', 'text-green-600');
-        vacationEl.classList.add('text-amber-600');
+        vacationEl.className = 'text-xl font-bold text-amber-600';
         document.getElementById('vacation-remaining-info').innerHTML = `pozostało: <span class="text-amber-600 font-semibold">${remaining}</span> dni`;
     } else {
-        vacationEl.classList.remove('text-red-600', 'text-amber-600');
-        vacationEl.classList.add('text-amber-600');
+        vacationEl.className = 'text-xl font-bold text-amber-600';
         document.getElementById('vacation-remaining-info').innerHTML = `pozostało: <span>${remaining}</span> dni`;
     }
 
-    // Informacja o L4
+    const sickLeaveInfo = document.getElementById('sick-leave-info');
     if (totalSick > 0) {
-        sickCountDisplay.innerText = totalSick;
+        document.getElementById('sick-count-display').innerText = totalSick;
         sickLeaveInfo.classList.remove('hidden');
     } else {
         sickLeaveInfo.classList.add('hidden');
@@ -1000,11 +999,9 @@ function updateYearlyStats() {
     selectedEl.innerText = officeDays.length;
     
     if (officeDays.length >= totalRequired) {
-        selectedEl.classList.remove('text-slate-700');
-        selectedEl.classList.add('text-green-600');
+        selectedEl.className = 'text-xl font-bold text-green-600';
     } else {
-        selectedEl.classList.remove('text-green-600');
-        selectedEl.classList.add('text-slate-700');
+        selectedEl.className = 'text-xl font-bold text-slate-700';
     }
 }
 
@@ -1012,7 +1009,6 @@ function renderCalendar() {
     const container = document.getElementById('calendar-grid');
     container.innerHTML = '';
 
-    // Oblicz pozostałe dni urlopu
     const usedVacation = vacationDays.length;
     const remainingVacation = vacationLimit - usedVacation;
 
@@ -1042,7 +1038,6 @@ function renderCalendar() {
         let statusClass = isMet ? "text-green-600 bg-green-50" : "text-slate-500 bg-slate-50";
         let statusIcon = isMet ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>` : '';
 
-        // Notka o święcie w sobotę
         let noteHtml = '';
         if (data.saturdayHolidayCount > 0) {
             const holidayNames = data.saturdayHolidayNames.join(', ');
@@ -1127,7 +1122,6 @@ function renderCalendar() {
                 } else {
                     classes += "bg-white text-slate-700 border border-slate-200 ";
                     if (currentMode === MODE_VACATION) {
-                        // Jeśli limit osiągnięty, pokaż inny styl
                         if (remainingVacation <= 0) {
                             classes += "hover:bg-red-50 hover:border-red-300 opacity-60";
                             title = `Limit urlopu (${vacationLimit} dni) wyczerpany!`;
@@ -1137,10 +1131,11 @@ function renderCalendar() {
                         }
                     } else if (currentMode === MODE_SICK) {
                         classes += "hover:bg-rose-50 hover:border-rose-300";
+                        title = "Kliknij aby dodać L4";
                     } else {
                         classes += "hover:bg-green-50 hover:border-green-300";
+                        title = "Kliknij aby dodać dzień w biurze";
                     }
-                    if (!title) title = "Praca zdalna (kliknij aby zmienić)";
                 }
                 html += `<div class="${classes}" ${onclick} title="${title}">${day.day}</div>`;
             }
