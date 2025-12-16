@@ -368,7 +368,7 @@
 
     // --- CONSTANTS & STATE ---
     const MIN_YEAR = 2025;
-    const MAX_YEAR = 2099; // extended to 2099
+    const MAX_YEAR = 2099; // extended range
     const nowYear = new Date().getFullYear();
     let currentYear = (nowYear >= MIN_YEAR && nowYear <= MAX_YEAR) ? nowYear : MIN_YEAR;
     let targetPercentage = 0.40;
@@ -989,8 +989,14 @@
         const currentMode = monthModes[monthIndex];
         const date = new Date(dateStr);
 
-        // Do not change weekends or "real" public holidays (except Christmas Eve)
-        if (isWeekend(date) || (holidaysCache.includes(dateStr) && dateStr !== `${currentYear}-12-24`)) return;
+        // Do not change weekends, statutory holidays or Christmas Eve (24.12 is also non-working)
+        if (
+            isWeekend(date) ||
+            holidaysCache.includes(dateStr) ||
+            dateStr === `${currentYear}-12-24`
+        ) {
+            return;
+        }
 
         const removeFromAll = () => {
             officeDays = officeDays.filter(d => d !== dateStr);
@@ -1009,7 +1015,6 @@
             if (vacationDays.includes(dateStr)) {
                 vacationDays = vacationDays.filter(d => d !== dateStr);
             } else {
-                // Check vacation limit
                 if (vacationLimit !== null && vacationLimit >= 0 && vacationDays.length >= vacationLimit) {
                     alert('You have reached the configured vacation days limit.');
                     return;
@@ -1042,6 +1047,7 @@
         }
     }
 
+    // FIXED: Christmas Eve (24.12) is now a non-working day.
     function getMonthData(monthIndex) {
         const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
         let startDay = new Date(currentYear, monthIndex, 1).getDay();
@@ -1053,7 +1059,6 @@
         let saturdayHolidayNames = [];
         let vacationCount = 0;
         let sickLeaveCount = 0;
-        let weekdayHolidayCount = 0;
 
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(currentYear, monthIndex, i);
@@ -1061,33 +1066,40 @@
             const _isWeekend = isWeekend(currentDate);
             const dayOfWeek = currentDate.getDay();
 
-            const isWigilia = (dateStr === `${currentYear}-12-24`); // Christmas Eve treated specially
-            const isRealHoliday = holidaysCache.includes(dateStr) && !isWigilia;
-            const isVisualHoliday = holidaysCache.includes(dateStr) || isWigilia;
+            const isWigilia = (dateStr === `${currentYear}-12-24`); // Christmas Eve, treated as non-working
+            const isStatHoliday = holidaysCache.includes(dateStr);   // legal public holidays
+            const isHoliday = isStatHoliday || isWigilia;            // any non-working holiday
 
             const _isOffice = officeDays.includes(dateStr);
             const _isVacation = vacationDays.includes(dateStr);
             const _isSickLeave = sickLeaveDays.includes(dateStr);
 
-            if (!_isWeekend) baseWorkingDaysCount++;
-            if (!_isWeekend && isRealHoliday) weekdayHolidayCount++;
+            // Count working days: exclude weekends, statutory holidays and Christmas Eve
+            if (!_isWeekend && !isHoliday) {
+                baseWorkingDaysCount++;
+            }
 
-            // Public holidays on Saturday (for info, not for working days calc)
-            if (isRealHoliday && dayOfWeek === 6) {
+            // Count statutory holidays falling on Saturday (for extra day off note)
+            if (isStatHoliday && dayOfWeek === 6) {
                 saturdayHolidayCount++;
                 const monthDay = dateStr.slice(5);
                 const name = HOLIDAY_NAMES[monthDay] || 'Holiday';
                 saturdayHolidayNames.push(name);
             }
 
-            if (!_isWeekend && !isRealHoliday && _isVacation) vacationCount++;
-            if (!_isWeekend && !isRealHoliday && _isSickLeave) sickLeaveCount++;
+            // Count absences only on actual working days
+            if (!_isWeekend && !isHoliday && _isVacation) {
+                vacationCount++;
+            }
+            if (!_isWeekend && !isHoliday && _isSickLeave) {
+                sickLeaveCount++;
+            }
 
             days.push({
                 day: i,
                 dateStr,
                 isWeekend: _isWeekend,
-                isHoliday: isVisualHoliday,
+                isHoliday,
                 isWigilia,
                 isOffice: _isOffice,
                 isVacation: _isVacation,
@@ -1095,8 +1107,7 @@
             });
         }
 
-        // Do not subtract saturdayHolidayCount – holiday on Saturday does not reduce working days
-        let daysToWorkBase = baseWorkingDaysCount - weekdayHolidayCount;
+        let daysToWorkBase = baseWorkingDaysCount;
         if (daysToWorkBase < 0) daysToWorkBase = 0;
 
         let effectiveWorkingDays = daysToWorkBase - vacationCount - sickLeaveCount;
@@ -1182,7 +1193,7 @@
                 ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
                 : '';
 
-            // Note about holidays on Saturday – extra day off info
+            // Note about statutory holidays on Saturday – extra day off info
             let noteHtml = '';
             if (data.saturdayHolidayCount > 0) {
                 const holidayNames = data.saturdayHolidayNames.join(', ');
